@@ -1,0 +1,17 @@
+'use strict'
+
+const config = {
+    SMS: {
+        SIM5: {
+            API_KEY: "some apy key from 5sim.net"
+        },
+        SIMSms: {
+            API_KEY: "some apy key from simsms.org"
+        },
+        SMSActivate: {
+            API_KEY: "some apy key from sms-activate.ru"
+        }
+    }
+}
+
+export default config
