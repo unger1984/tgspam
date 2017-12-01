@@ -1,0 +1,79 @@
+<div class="form">
+    <div id="filter" class="line <%=(task.active?"deactivate":"")%>">
+        <span>
+            SIM сервис:
+            <select id="smservice" <%=(task.active?"disabled":"")%>>
+                <option value="simsms" <%=(task.smservice==="simsms"?"selected":"")%>>simsms.org</option>
+                <option value="sms-activate" <%=(task.smservice==="sms-activate"?"selected":"")%>>sms-activate.ru</option>
+                <option value="sim5" <%=(task.smservice==="sim5"?"selected":"")%>>5sim.net</option>
+            </select>
+        </span>
+            <span>
+            Страна:
+            <select id="country" <%=(task.active?"disabled":"")%>>
+                <%=task.countryes%>
+            </select>
+        </span>
+            <span>
+            Количество:
+            <input type="number" id="count" value="<%=task.count%>" <%=(task.active?"disabled":"")%> style="width: 50px" required>
+        </span>
+            <span>
+            Емкость:
+            <input type="number" id="capacity" value="<%=task.capacity%>" <%=(task.active?"disabled":"")%> style="width: 50px" required>
+        </span>
+            <span>
+            <button class="button-small" id="start" <%=(task.active?"disabled":"")%>>Старт</button>
+        </span>
+    </div>
+    <span>
+        <button class="button-small" id="stop" <%=(task.active?"":"disabled")%>>Стоп</button>
+    </span>
+<span>
+            <button class="button-small" id="clearlog">Очистить</button>
+        </span>
+</div>
+<div id="progress">
+    <span>Прогресс: </span>
+    <div>
+        <div id="log">
+
+        </div>
+    </div>
+</div>
+<table class="list-targets">
+    <tbody id="tbody">
+    <tr>
+        <th style="width: 1%">#</th>
+        <th style="width: 1%">
+            <input type="checkbox" id="js-delete-all">
+        </th>
+        <th>Номер</th>
+        <th>Активирован</th>
+        <th>Емкость</th>
+        <th>Отправлено</th>
+        <th>Последняя отправка</th>
+    </tr>
+    <%
+    _.each(items,function(phone,key){
+    %>
+    <tr id="tr_<%=phone._id%>" class="trrow <%=(phone.active?"green":"red")%>">
+        <td><%=(key+1)%></td>
+        <td>
+            <input type="checkbox" class="ids" value="<%=phone._id%>">
+        </td>
+        <td class="text-left">+<%=phone.number%></td>
+        <td><%=_.template.formatDateTime(phone.created)%></td>
+        <td><%=(phone.joinedchat.length+" / "+phone.max)%></td>
+        <td><%=phone.sent%></td>
+        <td><%=(phone.active?(phone.last ? _.template.formatDateTime(phone.last) : ""):phone.error)%></td>
+    </tr>
+    <%
+    });
+    %>
+    </tbody>
+</table>
+<div style="margin-top: 1em;">
+    <button class="button" id="delete">Удалить</button>
+    <button class="button" id="clear">Очистить</button>
+</div>

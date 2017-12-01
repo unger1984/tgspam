@@ -1,0 +1,40 @@
+<table class="list-targets">
+    <tbody>
+    <tr>
+        <th style="width: 1%">#</th>
+        <th style="width: 1%">
+            <input type="checkbox" id="js-delete-all">
+        </th>
+        <th>Цель</th>
+        <th>Создан</th>
+        <th>Номер</th>
+        <th>Отправлено</th>
+        <th>Последняя отправка</th>
+    </tr>
+    <%
+    _.each(items,function(chat,key){
+    %>
+    <tr id="tr_<%=chat._id%>"  class="<%=(chat.active?"green":"red")%>">
+        <td><%=(key+1)%></td>
+        <td>
+            <input type="checkbox" class="ids" value="<%=chat._id%>">
+        </td>
+        <td class="text-left"><%=(chat.type === "hash"?"joinchat":"name")%>:<%=chat.link%></td>
+        <td><%=_.template.formatDateTime(chat.created)%></td>
+        <td><%=(chat.appoinet===0?"":"+"+chat.appoinet)%></td>
+        <td><%=chat.sent%></td>
+        <td><%=(chat.active?(chat.last ? _.template.formatDateTime(chat.last) : ""):chat.error)%></td>
+    </tr>
+    <%
+    });
+    %>
+    </tbody>
+</table>
+<div style="margin-top: 1em;">
+    <button class="button" id="delete">Удалить</button>
+    <button class="button" id="clear">Очистить</button>
+    <button class="button" id="submit">Загрузить</button>
+</div>
+<div style="margin-top: 1em">
+    <textarea id="list"></textarea>
+</div>

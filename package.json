@@ -1,6 +1,6 @@
 {
   "name": "tgspam",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Telegram spam system",
   "main": "index.js",
   "author": "unger1984",
@@ -40,7 +40,13 @@
   "dependencies": {
     "bluebird": "^3.5.1",
     "fs-extra": "^4.0.2",
+    "koa": "^2.4.1",
+    "koa-basic-auth": "^2.0.0",
+    "koa-json-body": "^5.3.0",
+    "koa-router": "^7.3.0",
+    "koa-static": "^4.0.2",
     "moment": "^2.19.2",
+    "mongoose": "^4.13.5",
     "node-fetch": "^1.7.3",
     "ramda": "^0.25.0",
     "telegram-mtproto": "3.2.7"

@@ -4,6 +4,7 @@ import fetch from 'node-fetch'
 import moment from 'moment'
 
 import config from '../config'
+import log from '../utils/mongo-logger'
 
 export default class SIMSms {
     static URL = "http://simsms.org/priemnik.php";
@@ -65,13 +66,13 @@ export default class SIMSms {
         let opts = [{apikey: config.SMS.SIMSms.API_KEY}, {metod: method}];
         opts = opts.concat(args)
         let url = SIMSms.URL + '?' + this._toargs(opts);
-        console.log("get", url)
+        if(this.isDebug) log("get", url)
         let res = await fetch(url);
         if (res.status === 200) {
             let r = await res.text();
             try {
                 let j = JSON.parse(r)
-                console.log(j)
+                if(this.isDebug) log(j)
                 return j;
             }catch(e){
                 this.state.error = this._error(r);
@@ -150,25 +151,22 @@ export default class SIMSms {
         }
     }
 
-    async waitSMS(delay) {
-        const del = parseInt(delay) || 20
-        while (1) {
-            await this._timeout(del * 1000+1);
-            if (await this.getStatus()) {
-                if (this.state.status !== "RECEIVED") {
-                    this.state.error = "WRONG_STATUS";
-                    return false;
-                }
-                if (this.state.sms) {
-                    return this.state.sms;
-                }
-                if(moment().diff(this.state.released)/1000>120) {
-                    this.state.error = "TIME_EXPIRED";
-                    return false;
-                }
-            } else {
+    async waitSMS(){
+        if (await this.getStatus()) {
+            if (this.state.status !== "RECEIVED") {
+                this.state.error = "WRONG_STATUS";
                 return false;
             }
+            if (this.state.sms) {
+                return this.state.sms;
+            }
+            if(moment().diff(this.state.released)/1000>120) {
+                this.state.error = "TIME_EXPIRED";
+                return false;
+            }
+            return 'WAIT_CODE'
+        } else {
+            return false;
         }
     }
 

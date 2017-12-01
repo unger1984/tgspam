@@ -4,11 +4,13 @@ import fetch from 'node-fetch'
 import moment from 'moment'
 
 import config from '../config'
+import log from '../utils/mongo-logger'
 
 export default class SMSActivate {
     static URL = "http://sms-activate.ru/stubs/handler_api.php";
 
     isDebug = false;
+
     state = {
         balance: 0,
         id: null,
@@ -77,11 +79,11 @@ export default class SMSActivate {
         let opts = [{api_key: config.SMS.SMSActivate.API_KEY}, {action: method}];
         opts = opts.concat(args)
         let url = SMSActivate.URL + '?' + this._toargs(opts);
-        console.log("get", url)
+        if(this.isDebug) log("get", url)
         let res = await fetch(url);
         if (res.status == 200) {
             res = await res.text();
-            console.log(res)
+            if(this.isDebug) log(res)
             return res;
         } else{
             this.state.error = "SERVER_ERROR";
@@ -156,25 +158,22 @@ export default class SMSActivate {
         }
     }
 
-    async waitSMS(delay) {
-        const del = parseInt(delay) || 20
-        while (1) {
-            await this._timeout(del * 1000);
-            if (await this.getStatus()) {
-                if (this.state.status !== "RECEIVED") {
-                    this.state.error = "WRONG_STATUS";
-                    return false;
-                }
-                if (this.state.sms) {
-                    return this.state.sms;
-                }
-                if(moment().diff(this.state.released)/1000>120) {
-                    this.state.error = "TIME_EXPIRED";
-                    return false;
-                }
-            } else {
+    async waitSMS(){
+        if (await this.getStatus()) {
+            if (this.state.status !== "RECEIVED") {
+                this.state.error = "WRONG_STATUS";
                 return false;
             }
+            if (this.state.sms) {
+                return this.state.sms;
+            }
+            if(moment().diff(this.state.released)/1000>120) {
+                this.state.error = "TIME_EXPIRED";
+                return false;
+            }
+            return 'WAIT_CODE'
+        } else {
+            return false;
         }
     }
 

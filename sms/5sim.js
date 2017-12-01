@@ -4,6 +4,7 @@ import fetch from 'node-fetch'
 import moment from 'moment'
 
 import config from '../config'
+import log from '../utils/mongo-logger'
 
 export default class SIM5 {
 
@@ -74,7 +75,7 @@ export default class SIM5 {
     }
 
     async _api(method) {
-        console.log("get", method)
+        if(this.isDebug) log("get", method)
         let res = await fetch(
             SIM5.URL + method,
             {
@@ -84,7 +85,7 @@ export default class SIM5 {
             });
         if (res.status == 200) {
             res = await res.json();
-            console.log(res)
+            if(this.isDebug) log(res)
             return res;
         } else if (res.status == 401) {
             throw new Error("BAD_KEY", res.status);
@@ -157,25 +158,22 @@ export default class SIM5 {
         }
     }
 
-    async waitSMS(delay) {
-        const del = parseInt(delay) || 20
-        while (1) {
-            await this._timeout(del * 1000+1);
-            if (await this.getStatus()) {
-                if (this.state.status !== "RECEIVED") {
-                    this.state.error = "WRONG_STATUS";
-                    return false;
-                }
-                if (this.state.sms) {
-                    return this.state.sms;
-                }
-                if(moment().diff(this.state.released)/1000>120) {
-                    this.state.error = "TIME_EXPIRED";
-                    return false;
-                }
-            } else {
+    async waitSMS(){
+        if (await this.getStatus()) {
+            if (this.state.status !== "RECEIVED") {
+                this.state.error = "WRONG_STATUS";
                 return false;
             }
+            if (this.state.sms) {
+                return this.state.sms;
+            }
+            if(moment().diff(this.state.released)/1000>120) {
+                this.state.error = "TIME_EXPIRED";
+                return false;
+            }
+            return 'WAIT_CODE'
+        } else {
+            return false;
         }
     }
 

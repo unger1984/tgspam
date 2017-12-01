@@ -15,7 +15,7 @@ export default class Telegram {
     _client = null;
     _storage = null;
 
-    pause = (sec) => {
+    static pause = (sec) => {
         return new Promise(resolve => setTimeout(resolve, parseInt(sec) * 1000 + 1));
     }
 
@@ -88,54 +88,59 @@ export default class Telegram {
         return user;
     }
 
-    _parseLink = (link) => {
+    static parseLink = (link) => {
         let match = link.match(/^(http|https):\/\/(t|telegram)\.me\/(joinchat\/)?(.*)\/?/i);
         if (match) {
             if (match[3] === "joinchat/") {
-                return {type: "hash", hash: match[4]}
+                return {type: "hash", link: match[4]}
             } else {
-                return {type: "channel", name: match[4]}
+                return {type: "channel", link: match[4]}
             }
         }
     }
 
-    joinChat = async (link) => {
-        let parse = this._parseLink(link);
-        if (parse) {
-            let invite = null
-            switch (parse.type) {
-                case "hash":
-                    invite = await this.api("messages.checkChatInvite", {hash: parse.hash})
-                    await this.pause(1);
-                    let chat = null;
-                    if (invite._ === "chatInviteAlready")
-                        chat = invite.chat;
-                    else if (invite._ === "chatInvite") { // need Join
-                        chat = await this.api("messages.importChatInvite", {hash: parse.hash})
-                        chat = chat.chats[0];
-                    }
+    joinChat = async (parsed_link) => {
+        let invite = null
+        switch (parsed_link.type) {
+            case "hash":
+                invite = await this.api("messages.checkChatInvite", {hash: parsed_link.link})
+                await Telegram.pause(1);
+                let chat = null;
+                if (invite._ === "chatInviteAlready")
+                    chat = invite.chat;
+                else if (invite._ === "chatInvite") { // need Join
+                    chat = await this.api("messages.importChatInvite", {hash: parsed_link.link})
+                    chat = chat.chats[0];
+                }
+                return chat;
+            case "channel":
+            default:
+                invite = await this.api("contacts.resolveUsername", {username: parsed_link.link})
+                if (invite && invite.chats && invite.chats.length>0 && invite.chats[0]._ === "channel") {
+                    await Telegram.pause(1);
+                    let chat = await this.api("channels.joinChannel",
+                        {
+                            channel: {
+                                _: 'inputPeerChannel',
+                                channel_id: invite.chats[0].id,
+                                access_hash: invite.chats[0].access_hash
+                            }
+                        })
+                    chat = chat.chats[0];
                     return chat;
-                    break;
-                case "channel":
-                default:
-                    invite = await this.api("contacts.resolveUsername", {username: parse.name})
-                    if (invite && invite.chats[0]._ === "channel") {
-                        await this.pause(1);
-                        let chat = await this.api("channels.joinChannel",
-                            {
-                                channel: {
-                                    _: 'inputPeerChannel',
-                                    channel_id: invite.chats[0].id,
-                                    access_hash: invite.chats[0].access_hash
-                                }
-                            })
-                        chat = chat.chats[0];
-                        return chat;
-                    }
-                    break;
-            }
+                }else{
+                    throw new Error("NO_CHANNEL",400)
+                }
+                return false;
         }
-        return null;
+    }
+
+    joinChatByLink = async (link) => {
+        let parse = Telegram.parseLink(link);
+        if (parse) {
+            return this.joinChat(parse)
+        }
+        return false;
     }
 
     leavChat = async (chat_id, access_hash) => {
@@ -171,7 +176,7 @@ export default class Telegram {
                         access_hash: access_hash
                     },
                     message: text,
-                    random_id: (Math.floor(Math.random() * 100000) + 1  )
+                    random_id: (Math.floor(Math.random() * 100000) + 2  )
                 })
         } else {
             message = await this.api("messages.sendMessage",
@@ -181,7 +186,7 @@ export default class Telegram {
                         chat_id: chat_id
                     },
                     message: text,
-                    random_id: (Math.floor(Math.random() * 100000) + 1  )
+                    random_id: (Math.floor(Math.random() * 100000) + 3  )
                 })
         }
         return message
@@ -190,6 +195,7 @@ export default class Telegram {
     remove = async () => {
         await this.done();
         this._storage.delfile();
+        return true;
     }
 
     done = async () => {
@@ -198,10 +204,11 @@ export default class Telegram {
         for (let i = 0; i < handlers.length; i++) {
             let handle = handlers[i]
             if (Object.prototype.toString.call(handle) === '[object Timer]') {
-                if (handle._list.msecs % 10 == 0) {
+                if (handle._list.msecs % 10 == 0 && handle._list.msecs != 5000) {
                     handle.unref();
                 }
             }
         }
+        return true;
     }
 }
