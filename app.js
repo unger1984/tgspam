@@ -4,6 +4,7 @@ import http from 'http'
 import Koa from 'koa'
 import serve from 'koa-static'
 import auth from 'koa-basic-auth'
+import Router from 'koa-router'
 
 import config from './config'
 import api from './routes'
@@ -11,6 +12,12 @@ import api from './routes'
 require('./init')
 
 const app = new Koa();
+
+const iprouter = new Router({prefix: "/ip"});
+iprouter.get("*", async ctx => {
+    ctx.body = ctx.request.ip
+})
+app.use(iprouter.routes())
 
 app.use(async (ctx, next) => {
     try {

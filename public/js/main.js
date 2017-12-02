@@ -48,12 +48,12 @@ const startSources = async () => {
         data: JSON.stringify({task: task})
     })
 
-    if(res.status){
+    if (res.status) {
         taskActive = true;
 
         $('#start').html('Старт');
         $('#stop').prop('disabled', false)
-    }else{
+    } else {
         alert(res.error);
         $('#start').html('Старт');
         $('#stop').prop('disabled', true)
@@ -381,12 +381,12 @@ const startSpam = async () => {
             data: JSON.stringify({task: task})
         })
 
-        if(res.status){
+        if (res.status) {
             taskActive = true;
 
             $('#start').html('Старт');
             $('#stop').prop('disabled', false)
-        }else{
+        } else {
             alert(res.error);
             $('#start').html('Старт');
             $('#stop').prop('disabled', true)
@@ -458,6 +458,52 @@ const getSpams = async () => {
     idleInterval = setInterval(updateSpams, interval)
 }
 
+const updateProxys = async () => {
+    let proxy = await $.ajax("/api/settings/proxy");
+    if (proxy.status) {
+        $('#remote').html(proxy.ip)
+    } else {
+        $('#remote').html(proxy.error)
+    }
+}
+
+const getProxys = async () => {
+    if (idleInterval !== null)
+        clearInterval(idleInterval)
+    lastLog = null;
+
+    $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
+    let proxy = await $.ajax("/api/settings/proxy");
+    if (proxy.status) {
+        proxy = proxy.ip
+    } else {
+        proxy = proxy.error
+    }
+    await template("proxys", {proxy: proxy})
+
+    $('#save').click((e) => {
+        e.preventDefault()
+        let ip = $('#ip').val().trim();
+        let port = $('#port').val().trim();
+        if (ip.length <= 0 || port.length <= 0) {
+            alert('Заполните данные ip и порт')
+            return
+        }
+        $.ajax({
+            url: "/api/settings/proxy",
+            method: "PUT",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify({ip: ip, port: port, login: $('#login').val(), password: $('#password').val()})
+        }).then(r => {
+            console.log(r)
+            getProxys();
+        })
+    })
+
+    idleInterval = setInterval(updateProxys, interval)
+}
+
 $(function () {
     $('.menulink').click(function (e) {
         e.preventDefault();
@@ -474,6 +520,9 @@ $(function () {
                 break;
             case "spams":
                 getSpams();
+                break;
+            case "proxys":
+                getProxys();
                 break;
         }
     })

@@ -27,7 +27,7 @@ export default class Telegram {
         this._storage = new JsonStorage(filePath);
         this._client = new MTProto({
             api: api,
-            server: {dev: false},
+            server: {dev: false, webogram: false},
             app: {storage: this._storage}
         });
     }

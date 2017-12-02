@@ -31,105 +31,101 @@ const TaskService = (() => {
     }
 
     const joinChat = async (phone, telegram) => {
-        if (!__isLoop) {
-            __isLoop = true
-            let cnt = phone.max - phone.joinedchat.length;
+        console.log("join for",phone.number, phone.max, phone.joinedchat.length)
+        let cnt = phone.max - phone.joinedchat.length;
 
-            if (cnt <= 0) {
-                // all joined
-                __isLoop = false
-                return true;
-            }
-
-            let tg = null;
-            if (telegram)
-                tg = telegram
-            else
-                tg = new Telegram(__dirname + '/../auth/' + phone.number + '.auth');
-
-            if (cnt > 5)
-                cnt = 5
-            for (let i = 0; i < cnt; i++) {
-                let targetchat = await TargetChat.findOne({$and: [{"appoinet": 0}, {"active": true}]});
-                if (targetchat) {
-                    await Telegram.pause(3)
-                    let chat = false;
-                    log("join ", phone.number, targetchat.link)
-                    try {
-                        chat = await tg.joinChat(targetchat)
-                        if (chat) {
-                            let type = null;
-                            if (chat._ === "channel") {
-                                targetchat.channel_id = chat.id
-                                targetchat.access_hash = chat.access_hash
-                                type = "channel"
-                            } else {
-                                targetchat.chat_id = chat.id
-                                type = "chat"
-                            }
-                            targetchat.appoinet = phone.number
-                            await targetchat.save();
-                            phone.joinedchat.push(
-                                {
-                                    link: targetchat.link,
-                                    type: type,
-                                    chat_id: chat.id,
-                                    access_hash: targetchat.access_hash,
-                                    sent: 0
-                                }
-                            )
-                            phone.seen = new Date();
-                            await phone.save();
-                        }
-
-                    } catch (e) {
-                        log("error join", e)
-                        if (e.message === "INVITE_HASH_EXPIRED" ||
-                            e.message === "USERNAME_NOT_OCCUPIED" ||
-                            e.message === "NO_CHANNEL") {
-                            targetchat.active = false;
-                            targetchat.error = e.message;
-                            await targetchat.save()
-                            if (!telegram)
-                                tg.done()
-                            __isLoop = false
-                            return false;
-                        } else {
-                            phone.active = false;
-                            phone.error = e.message;
-                            phone.save();
-                            if (!telegram)
-                                tg.done()
-                            __isLoop = false
-                            return false;
-                        }
-                    }
-                } else {
-                    log("NO_CHATS!")
-                    if (!telegram)
-                        tg.done()
-                    __isLoop = false
-                    return false;
-                }
-            }
-            __isLoop = false
+        if (cnt <= 0) {
+            // all joined
             return true;
         }
+
+        let tg = null;
+        if (telegram)
+            tg = telegram
+        else
+            tg = new Telegram(__dirname + '/../auth/' + phone.number + '.auth');
+
+        if (cnt > 5)
+            cnt = 5
+        for (let i = 0; i < cnt; i++) {
+            let targetchat = await TargetChat.findOne({$and: [{"appoinet": 0}, {"active": true}]});
+            if (targetchat) {
+                await Telegram.pause(3)
+                let chat = false;
+                log("join ", phone.number, targetchat.link)
+                try {
+                    chat = await tg.joinChat(targetchat)
+                    if (chat) {
+                        let type = null;
+                        if (chat._ === "channel") {
+                            targetchat.channel_id = chat.id
+                            targetchat.access_hash = chat.access_hash
+                            type = "channel"
+                        } else {
+                            targetchat.chat_id = chat.id
+                            type = "chat"
+                        }
+                        targetchat.appoinet = phone.number
+                        await targetchat.save();
+                        phone.joinedchat.push(
+                            {
+                                link: targetchat.link,
+                                type: type,
+                                chat_id: chat.id,
+                                access_hash: targetchat.access_hash,
+                                sent: 0
+                            }
+                        )
+                        phone.seen = new Date();
+                        await phone.save();
+                        log("JOIN OK")
+                    }else{
+                        log("JOIN FAILD")
+                    }
+
+                } catch (e) {
+                    log("error join", e)
+                    if (e.message === "INVITE_HASH_EXPIRED" ||
+                        e.message === "USERNAME_NOT_OCCUPIED" ||
+                        e.message === "USERNAME_INVALID" ||
+                        e.message === "NO_CHANNEL") {
+                        targetchat.active = false;
+                        targetchat.error = e.message;
+                        await targetchat.save()
+                        if (!telegram)
+                            tg.done()
+                        return false;
+                    } else {
+                        phone.active = false;
+                        phone.error = e.message;
+                        phone.save();
+                        if (!telegram)
+                            tg.done()
+                        return false;
+                    }
+                }
+            } else {
+                log("NO_CHATS!")
+                if (!telegram)
+                    tg.done()
+                return false;
+            }
+        }
+        return true;
     }
 
     const waitSMS = async (smsservice, delay) => {
         const del = parseInt(delay) || 20
         while (1) {
-            if(!__task.active) return false;
+            if (!__task.active) return false;
             await Telegram.pause(del);
-            if(!__task.active) return false;
+            if (!__task.active) return false;
             let sms = await smsservice.waitSMS()
-            if(!sms){
-                log("error",smsservice.state.error)
+            if (!sms) {
                 return false
-            }else if(sms === "WAIT_CODE"){
+            } else if (sms === "WAIT_CODE") {
                 log(sms)
-            }else{
+            } else {
                 return sms
             }
         }
@@ -226,6 +222,7 @@ const TaskService = (() => {
                 auth = await tg.signUp(state.phone, phone_data.phone_code_hash, sms, first_name, last_name)
             }
         } catch (e) {
+            log("error", e)
             smservice.ban()
             await tg.remove()
             await Telegram.pause(10)
@@ -274,39 +271,54 @@ const TaskService = (() => {
                     {"active": true}
                 ]
             })
-            if(targetchat) {
+            if (targetchat) {
                 let phone = await Phone.findOne({"number": targetchat.appoinet})
                 if (phone) {
-                    log("sent ", phone.number, targetchat.link)
-                    const tg = new Telegram(__dirname + '/../auth/' + phone.number + '.auth');
-                    try {
-                        if (targetchat.channel_id)
-                            await tg.messageToChat(__task.message, targetchat.channel_id, targetchat.access_hash)
-                        else if (targetchat.chat_id)
-                            await tg.messageToChat(__task.message, targetchat.chat_id);
-                    } catch (e) {
-                        log("sent error", e)
-                        targetchat.active = false
-                        targetchat.error = e.message
+                    while (targetchat) {
+                        log("sent ", phone.number, targetchat.link)
+                        if (!__task.active) {
+                            __isLoop = false
+                            return;
+                        }
+                        const tg = new Telegram(__dirname + '/../auth/' + phone.number + '.auth');
+                        try {
+                            if (targetchat.channel_id)
+                                await tg.messageToChat(__task.message, targetchat.channel_id, targetchat.access_hash)
+                            else if (targetchat.chat_id)
+                                await tg.messageToChat(__task.message, targetchat.chat_id);
+                        } catch (e) {
+                            log("error", e)
+                            targetchat.active = false
+                            targetchat.error = e.message
+                            await targetchat.save();
+                            __isLoop = false;
+                            return;
+                        }
+                        targetchat.issent = true;
+                        targetchat.sent++;
+                        targetchat.last = new Date();
                         await targetchat.save();
-                        __isLoop = false;
-                        return;
+                        phone.seen = new Date();
+                        phone.sent++;
+                        await phone.save();
+                        __task.sent++;
+                        await __task.save();
+                        log("OK");
+                        targetchat = await TargetChat.findOne({
+                            $and: [
+                                {"appoinet": phone.number},
+                                {"issent": false},
+                                {"active": true}
+                            ]
+                        })
+                        await Telegram.pause(1)
                     }
-                    targetchat.issent = true;
-                    targetchat.sent++;
-                    targetchat.last = new Date();
-                    await targetchat.save();
-                    phone.seen = new Date();
-                    phone.sent++;
-                    await phone.save();
-                    __task.sent++;
-                    await __task.save();
-                    log("OK");
                     __isLoop = false
                 }
             }
         } else {
             clearInterval(__idleInterval)
+            console.log("__idleInterval clear")
             __isLoop = false
             __task.active = false;
             await __task.save();
@@ -314,6 +326,29 @@ const TaskService = (() => {
     }
 
     const joinloop = async () => {
+        if (__isLoop) return false;
+
+        __isLoop = true
+        __count = await Phone.count({});
+        console.log("joinloop", (await Phone.count({
+                $and: [
+                    {$where: "this.joinedchat.length < this.max"},
+                    {"active": true},
+                ]
+            })),
+            (await TargetChat.count({appoinet: 0})),
+            __task.active, (await Phone.count({
+                $and: [
+                    {$where: "this.joinedchat.length < this.max"},
+                    {"active": true},
+                    {
+                        $or: [
+                            {'seen': {$lte: new Date((new Date()).getTime() - 5 * 60 * 1000)}},
+                            {'seen': {$exists: false}}
+                        ]
+                    }
+                ]
+            })), __count)
         if ((await Phone.count({
                 $and: [
                     {$where: "this.joinedchat.length < this.max"},
@@ -343,10 +378,12 @@ const TaskService = (() => {
         } else if (__count >= __task.count && __task.active) {
             if (__idleInterval !== null) {
                 clearInterval(__idleInterval);
+                console.log("__idleInterval clear")
                 __isLoop = false
             }
             if (__idleRegInterval !== null) {
                 clearInterval(__idleRegInterval);
+                console.log("__idleRegInterval clear")
                 __isRegLoop = false
             }
             log("WELL DONE!")
@@ -356,15 +393,16 @@ const TaskService = (() => {
             // if (!__isRegLoop)
             //     regloop()
         }
+        __isRegLoop = false
         return true;
     }
 
     const regloop = async () => {
-        if(__isRegLoop) return false;
+        if (__isRegLoop) return false;
 
         __isRegLoop = true
         __count = await Phone.count({});
-        if(__count < __task.count && __task.active) {
+        if (__count < __task.count && __task.active) {
             let s = await regNumber();
             if (s) {
                 __count++;
