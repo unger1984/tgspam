@@ -1,6 +1,7 @@
 'use strict'
 
 const config = {
+    fake: true,
     auth: {
         login: 'admin',
         password: '123456',
