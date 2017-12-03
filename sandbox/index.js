@@ -1,7 +1,8 @@
 'use strict'
 
 import proxy from './proxy'
-import test from './test'
+import clusters from './clusters'
+import main from './main'
 
 if(process.argv.length!==3){
     console.log("Usage: node sandbox command")
@@ -12,8 +13,11 @@ switch (process.argv[2]){
     case 'proxy':
         proxy();
         break;
-    case 'test':
-        test();
+    case 'clusters':
+        clusters();
+        break;
+    case 'main':
+        main();
         break;
     default:
         console.log("Unknown command");

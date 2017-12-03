@@ -1,4 +1,4 @@
 'use strict'
 
 require('./mongo')
-require('./redis')
+// require('./redis')

@@ -15,6 +15,25 @@ export default class Telegram {
     _client = null;
     _storage = null;
 
+    timeout = 20;
+    runtimer = 0
+    __timeoutIdle = null;
+
+    __checkTimeout = async () => {
+        this.runtimer++;
+        if (this.runtimer >= this.timeout) {
+            // kill process
+            await this.done();
+            throw new Error("TELEGRAM_TIMEOUT")
+        } else
+            this.__timeoutIdle = setTimeout(this.__checkTimeout, 1001)
+    }
+
+    __runIt = async () => {
+        this.runtimer = 0
+        this.__timeoutIdle = setTimeout(this.__checkTimeout, 1001)
+    }
+
     static pause = (sec) => {
         return new Promise(resolve => setTimeout(resolve, parseInt(sec) * 1000 + 1));
     }
@@ -23,7 +42,8 @@ export default class Telegram {
         return this._client(method, params)
     }
 
-    constructor(filePath) {
+    constructor(filePath, timeout) {
+        this.timeout = timeout || 300
         this._storage = new JsonStorage(filePath);
         this._client = new MTProto({
             api: api,
@@ -33,7 +53,11 @@ export default class Telegram {
     }
 
     getConfig = async () => {
-        return await this.api("help.getConfig");
+        this.__runIt();
+        const res = await this.api("help.getConfig");
+        if (this.__timeoutIdle !== null)
+            this.__timeoutIdle.unref();
+        return res
     }
 
     sendCode = async (number) => {
@@ -116,7 +140,7 @@ export default class Telegram {
             case "channel":
             default:
                 invite = await this.api("contacts.resolveUsername", {username: parsed_link.link})
-                if (invite && invite.chats && invite.chats.length>0 && invite.chats[0]._ === "channel") {
+                if (invite && invite.chats && invite.chats.length > 0 && invite.chats[0]._ === "channel") {
                     await Telegram.pause(1);
                     let chat = await this.api("channels.joinChannel",
                         {
@@ -128,11 +152,12 @@ export default class Telegram {
                         })
                     chat = chat.chats[0];
                     return chat;
-                }else{
-                    throw new Error("NO_CHANNEL",400)
+                } else {
+                    throw new Error("NO_CHANNEL", 400)
                 }
                 return false;
         }
+        return false
     }
 
     joinChatByLink = async (link) => {
@@ -176,7 +201,7 @@ export default class Telegram {
                         access_hash: access_hash
                     },
                     message: text,
-                    random_id: (Math.floor(Math.random() * 100000) + 2  )
+                    random_id: (Math.floor(Math.random() * 100000) + 2)
                 })
         } else {
             message = await this.api("messages.sendMessage",
@@ -186,7 +211,7 @@ export default class Telegram {
                         chat_id: chat_id
                     },
                     message: text,
-                    random_id: (Math.floor(Math.random() * 100000) + 3  )
+                    random_id: (Math.floor(Math.random() * 100000) + 3)
                 })
         }
         return message

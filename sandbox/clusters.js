@@ -1,11 +1,10 @@
 'use strict'
 
 import redis from 'redis'
-
 import Task from '../models/Task'
 
 
-const test = () => {
+const clusters = () => {
     const _randomInteger = (min, max) => {
         var rand = min - 0.5 + Math.random() * (max - min + 1)
         rand = Math.round(rand);
@@ -129,4 +128,4 @@ const test = () => {
     )
 }
 
-export default test
+export default clusters

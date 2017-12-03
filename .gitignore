@@ -55,3 +55,4 @@ fastlane/screenshots
 
 config/index.js
 auth/*
+lock

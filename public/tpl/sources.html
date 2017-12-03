@@ -1,4 +1,6 @@
 <div class="form">
+    <span>Сообщение:</span>
+    <textarea id="maessage"><%=task.message%></textarea>
     <div id="filter" class="line <%=(task.active?"deactivate":"")%>">
         <span>
             SIM сервис:
@@ -30,11 +32,12 @@
         <button class="button-small" id="stop" <%=(task.active?"":"disabled")%>>Стоп</button>
     </span>
 <span>
-            <button class="button-small" id="clearlog">Очистить</button>
+            <button class="button-small" id="clearlog">Очистить лог</button>
         </span>
 </div>
 <div id="progress">
     <span>Прогресс: </span>
+    <span id="counter"><%=task.sent%> / <%=total%></span>
     <div>
         <div id="log">
 

@@ -8,9 +8,14 @@ import config from '../config'
 // TODO it's very bad experience :(
 function l(obj) {
     switch (Object.prototype.toString.call(obj)){
+        case '[object Undefined]':
+            return "undefined"
         case '[object String]':
         case '[object Number]':
-            return obj
+        case '[object Null]':
+            return obj;
+        case '[object Error]':
+            return JSON.stringify({error: obj.message});
         case '[object Function]':
         case '[object Object]':
         default:

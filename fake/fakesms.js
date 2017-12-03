@@ -40,7 +40,7 @@ export default class FakeSMS {
     async getNumber(country,delay) {
         const del = parseInt(delay) || 1
         await this._timeout(del)
-        const status = this._randomInteger(0,1)
+        const status = 2 //this._randomInteger(0,1)
         if(status === 1){
             this.state.error = "NO_NUMBERS";
             return false

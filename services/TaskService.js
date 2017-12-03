@@ -436,11 +436,11 @@ const TaskService = (() => {
                 __task = task;
                 __task.active = true;
                 __task.save();
-                __count = await Phone.count({});
-                // console.log("COUNT",__count,__task.count)
-                await log("Task start")
-                __idleInterval = setInterval(joinloop, 5001)
-                __idleRegInterval = setInterval(regloop, 5501)
+                // __count = await Phone.count({});
+                // // console.log("COUNT",__count,__task.count)
+                // await log("Task start")
+                // __idleInterval = setInterval(joinloop, 5001)
+                // __idleRegInterval = setInterval(regloop, 5501)
             } else {
                 await log("Task already started!")
             }
@@ -451,15 +451,15 @@ const TaskService = (() => {
                 __task = task;
                 __task.active = true;
                 __task.save();
-                __count = (await TargetChat.count({
-                    $and: [
-                        {"appoinet": {$gt: 0}},
-                        {"issent": false},
-                        {"active": true}
-                    ]
-                }));
-                await log("Task smap start")
-                __idleInterval = setInterval(spamloop, 1001)
+                // __count = (await TargetChat.count({
+                //     $and: [
+                //         {"appoinet": {$gt: 0}},
+                //         {"issent": false},
+                //         {"active": true}
+                //     ]
+                // }));
+                // await log("Task smap start")
+                // __idleInterval = setInterval(spamloop, 1001)
             } else {
                 await log("Task already started!")
             }
@@ -473,14 +473,14 @@ const TaskService = (() => {
                 await log("Task stop")
                 __task.active = false;
                 await __task.save();
-                if (__idleInterval !== null) {
-                    clearInterval(__idleInterval);
-                    __isLoop = false
-                }
-                if (__idleRegInterval !== null) {
-                    clearInterval(__idleRegInterval);
-                    __isRegLoop = false
-                }
+                // if (__idleInterval !== null) {
+                //     clearInterval(__idleInterval);
+                //     __isLoop = false
+                // }
+                // if (__idleRegInterval !== null) {
+                //     clearInterval(__idleRegInterval);
+                //     __isRegLoop = false
+                // }
             } else {
                 await log("Task already stop!")
             }

@@ -27,37 +27,60 @@ const template = async (path, data) => {
 const startSources = async () => {
     $('#filter').addClass("deactivate")
     $('#smservice').prop('disabled', true)
+    $('#maessage').prop('disabled',true)
     $('#country').prop('disabled', true)
     $('#count').prop('disabled', true)
     $('#capacity').prop('disabled', true)
     $('#start').prop('disabled', true)
     $('#start').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
 
-    let task = {
-        smservice: $('#smservice').val(),
-        country: $('#country').val(),
-        count: $('#count').val(),
-        capacity: $('#capacity').val(),
-    }
-
-    let res = await $.ajax({
-        url: "/api/tasks/start",
-        method: "POST",
-        dataType: 'json',
-        contentType: "application/json; charset=utf-8",
-        data: JSON.stringify({task: task})
-    })
-
-    if (res.status) {
-        taskActive = true;
-
+    let message = $('#maessage').val().trim()
+    if (message.length <= 0) {
         $('#start').html('Старт');
-        $('#stop').prop('disabled', false)
-    } else {
-        alert(res.error);
-        $('#start').html('Старт');
-        $('#stop').prop('disabled', true)
+        $('#filter').removeClass("deactivate")
+        $('#smservice').prop('disabled', false)
+        $('#country').prop('disabled', false)
+        $('#maessage').prop('disabled',false)
+        $('#count').prop('disabled', false)
+        $('#capacity').prop('disabled', false)
         $('#start').prop('disabled', false)
+        $('#stop').prop('disabled', true)
+        alert("Сообщение не должно быть пустым!");
+    } else {
+
+        let task = {
+            smservice: $('#smservice').val(),
+            country: $('#country').val(),
+            count: $('#count').val(),
+            capacity: $('#capacity').val(),
+            message: message
+        }
+
+        let res = await $.ajax({
+            url: "/api/tasks/start",
+            method: "POST",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify({task: task})
+        })
+
+        if (res.status) {
+            taskActive = true;
+
+            $('#start').html('Старт');
+            $('#stop').prop('disabled', false)
+        } else {
+            $('#start').html('Старт');
+            $('#filter').removeClass("deactivate")
+            $('#smservice').prop('disabled', false)
+            $('#country').prop('disabled', false)
+            $('#maessage').prop('disabled',false)
+            $('#count').prop('disabled', false)
+            $('#capacity').prop('disabled', false)
+            $('#start').prop('disabled', false)
+            $('#stop').prop('disabled', true)
+            alert(res.error);
+        }
     }
 }
 
@@ -79,6 +102,7 @@ const stopSources = async () => {
     $('#filter').removeClass("deactivate")
     $('#smservice').prop('disabled', false)
     $('#country').prop('disabled', false)
+    $('#maessage').prop('disabled',false)
     $('#count').prop('disabled', false)
     $('#capacity').prop('disabled', false)
     $('#start').prop('disabled', false)
@@ -103,6 +127,7 @@ const updateLog = async () => {
     }
     res = await $.ajax("/api/tasks");
     if (res.status) {
+        $('#counter').html(res.task.sent + " / " + res.good + " / " + res.total);
         if (taskActive !== res.task.active) {
             if (res.task.active) {
                 $('#filter').addClass("deactivate")
@@ -111,6 +136,7 @@ const updateLog = async () => {
                 $('#count').prop('disabled', true)
                 $('#capacity').prop('disabled', true)
                 $('#start').prop('disabled', true)
+                $('#maessage').prop('disabled',false)
                 $('#start').html('Старт');
                 $('#stop').prop('disabled', false)
             } else {
@@ -118,6 +144,7 @@ const updateLog = async () => {
                 $('#filter').removeClass("deactivate")
                 $('#smservice').prop('disabled', false)
                 $('#country').prop('disabled', false)
+                $('#maessage').prop('disabled',true)
                 $('#count').prop('disabled', false)
                 $('#capacity').prop('disabled', false)
                 $('#start').prop('disabled', false)
@@ -214,7 +241,7 @@ const getSources = async () => {
     let tasks = await $.ajax("/api/tasks");
     tasks.task.countryes = getCountryes(tasks.task.smservice, tasks.task.country)
     taskActive = tasks.task.active;
-    await template("sources", {items: res.list, task: tasks.task})
+    await template("sources", {items: res.list, task: tasks.task, good: tasks.good, total: tasks.task.total})
 
     updateLog();
     $('#clear').click(e => {
