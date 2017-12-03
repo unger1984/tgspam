@@ -44,7 +44,7 @@ router.put("/",async ctx => {
             ids.push(mongoose.Types.ObjectId(list[i]))
         let phones = await Phone.find({'_id': {$in: ids}})
         for(let i=0; i<phones.length; i++) {
-            await TargetChat.update({"appoinet":phones[i].number},{"$set":{"appoinet":0, "sent": 0, "issent": false, "last": undefined}},{multi: true})
+            await TargetChat.update({"appoinet":phones[i].number},{"$set":{"active": true, "appoinet":0, "sent": 0, "issent": false, "last": undefined}},{multi: true})
             removeSync(__dirname + "/../auth/" + phones[i].number + ".auth");
             task.sent = task.sent - phones[i].sent
         }
@@ -64,7 +64,7 @@ router.delete("/list",async ctx => {
         return
     }
     for(let i=0; i<phones.length; i++) {
-        await TargetChat.update({"appoinet":phones[i].number},{"$set":{"appoinet":0, "sent": 0, "issent": false, "last": undefined}},{multi: true})
+        await TargetChat.update({"appoinet":phones[i].number},{"$set":{"active": true, "appoinet":0, "sent": 0, "issent": false, "last": undefined}},{multi: true})
         task.sent = task.sent - phones[i].sent
     }
     await task.save();

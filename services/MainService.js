@@ -423,13 +423,13 @@ export default class MainService {
         if (!await this.__lockFile("spamloop", true)) return;
         info("%d %s", (new Date()).getTime(), ">spam")
 
-        const phone = await Phone.findOne({
-            $and: [
-                {$where: "this.joinedchat.length > this.max"},
-                {"active": true},
-                {'seen': {$lte: new Date((new Date()).getTime() - 1 * 60 * 1000)}},
-            ]
-        })
+        const task = await this.__getTask();
+        const phone = await Phone.findOne({'joinedchat': {$size: task.capacity}})
+            .where('active').equals(true)
+            .where('seen').lte(new Date((new Date()).getTime() - 1 * 60 * 1000))
+            .where('sent').lt(task.capacity)
+            .limit(1)
+            .exec()
         if (phone) {
             await this.spamPhone(phone);
         }

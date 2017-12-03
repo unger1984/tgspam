@@ -215,17 +215,23 @@ const getCountryes = (smsservice, country) => {
     switch (smsservice) {
         case 'sim5':
             opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
-                '                <option value="ua" disabled>Украина</option>' +
                 '                <option value="kz" ' + (country === "kz" ? "selected" : "") + '>Казахстан</option>' +
                 '                <option value="ph" ' + (country === "ph" ? "selected" : "") + '>Филипины</option>'
             break;
         case 'simsms':
+            opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
+                '                <option value="ua" ' + (country === "ua" ? "selected" : "") + '>Украина</option>' +
+                '                <option value="kz" ' + (country === "kz" ? "selected" : "") + '>Казахстан</option>' +
+                '                <option value="uk" ' + (country === "uk" ? "selected" : "") + '>Великобритания</option>' +
+                '                <option value="id" ' + (country === "id" ? "selected" : "") + '>Индонезия</option>' +
+                '                <option value="my" ' + (country === "my" ? "selected" : "") + '>Малазия</option>' +
+                '                <option value="ph"  + (country === "kz" ? "selected" : "") + \'>Филипины</option>'
+            break;
         case 'sms-activate':
         default:
             opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
                 '                <option value="ua" ' + (country === "ua" ? "selected" : "") + '>Украина</option>' +
-                '                <option value="kz" ' + (country === "kz" ? "selected" : "") + '>Казахстан</option>' +
-                '                <option value="ph" disabled>Филипины</option>'
+                '                <option value="kz" ' + (country === "kz" ? "selected" : "") + '>Казахстан</option>'
             break;
     }
     return opts;
