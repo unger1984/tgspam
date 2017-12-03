@@ -227,11 +227,11 @@ export default class MainService {
         const task = await this.__getTask()
         if (!task.active) return;
 
-        let cnt = phone.max - phone.joinedchat.length; // left join
-        if (cnt > 5)
-            cnt = 5;
-
-        for (let i = 0; i < cnt; i++) {
+        // let cnt = phone.max - phone.joinedchat.length; // left join
+        // if (cnt > 1)
+        //     cnt = 1;
+        //
+        // for (let i = 0; i < cnt; i++) {
             let tg = null
             let targetchat = null
             let chat = null
@@ -303,7 +303,7 @@ export default class MainService {
                     return;
                 }
             }
-        }
+        // }
     }
 
     spamPhone = async (phone) => {
@@ -405,7 +405,7 @@ export default class MainService {
                 {"active": true},
                 {
                     $or: [
-                        {'seen': {$lte: new Date((new Date()).getTime() - 5 * 60 * 1000)}},
+                        {'seen': {$lte: new Date((new Date()).getTime() - 1 * 60 * 1000)}},
                         {'seen': {$exists: false}}
                     ]
                 }
@@ -425,9 +425,9 @@ export default class MainService {
 
         const phone = await Phone.findOne({
             $and: [
-                {$where: "this.joinedchat.length >= this.max"},
+                {$where: "this.joinedchat.length > this.max"},
                 {"active": true},
-                {'seen': {$lte: new Date((new Date()).getTime() - 5 * 60 * 1000)}},
+                {'seen': {$lte: new Date((new Date()).getTime() - 1 * 60 * 1000)}},
             ]
         })
         if (phone) {

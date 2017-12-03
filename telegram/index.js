@@ -53,7 +53,7 @@ export default class Telegram {
     }
 
     getConfig = async () => {
-        this.__runIt();
+        // this.__runIt();
         const res = await this.api("help.getConfig");
         if (this.__timeoutIdle !== null)
             this.__timeoutIdle.unref();

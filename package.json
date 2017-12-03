@@ -52,6 +52,6 @@
     "node-fetch": "^1.7.3",
     "ramda": "^0.25.0",
     "redis": "^2.8.0",
-    "telegram-mtproto": "3.2.7"
+    "telegram-mtproto": "unger1984/telegram-mtproto"
   }
 }
