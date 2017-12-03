@@ -227,6 +227,16 @@ const getCountryes = (smsservice, country) => {
                 '                <option value="my" ' + (country === "my" ? "selected" : "") + '>Малазия</option>' +
                 '                <option value="ph"  + (country === "kz" ? "selected" : "") + \'>Филипины</option>'
             break;
+        case 'sms-reg':
+            opts = '<option value="all" \' + (country === "all" ? "selected" : "") + \'>Любая</option>' +
+                '               <option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
+                '                <option value="ua" ' + (country === "ua" ? "selected" : "") + '>Украина</option>' +
+                '                <option value="kz" ' + (country === "kz" ? "selected" : "") + '>Казахстан</option>'
+            break;
+        case 'smska':
+            opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
+                '                <option value="ua" ' + (country === "ua" ? "selected" : "") + '>Украина</option>'
+            break;
         case 'sms-activate':
         default:
             opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +

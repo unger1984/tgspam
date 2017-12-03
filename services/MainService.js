@@ -15,6 +15,8 @@ import Telegram from '../telegram'
 import SIM5 from '../sms/5sim'
 import SIMSms from '../sms/simsms'
 import SMSActivate from '../sms/sms-activate'
+import SMSka from '../sms/smska'
+import SMSReg from '../sms/sms-reg'
 import log from '../utils/mongo-logger'
 import Util from '../utils'
 import FakeSMS from "../fake/fakesms";
@@ -114,6 +116,12 @@ export default class MainService {
                 case 'sms-activate':
                     smsService = new SMSActivate(isDebug)
                     break;
+                case 'smska':
+                    smsService = new SMSka(isDebug)
+                    break;
+                case 'sms-reg':
+                    smsService = new SMSReg(isDebug);
+                    break;
                 case 'simsms':
                 default:
                     smsService = new SIMSms(isDebug)
@@ -167,7 +175,7 @@ export default class MainService {
             }
 
             // Wait sms code
-            log("WAIT_CODE")
+            log("WAIT_CODE",state.phone)
             let sms = "WAIT_CODE"
             while (sms === "WAIT_CODE") {
                 await this.pause(20)    // TODO configure delay
@@ -180,7 +188,7 @@ export default class MainService {
                 }
             }
             if (!sms) {
-                log("error", smsService.state.error)
+                log("error", state.phone, smsService.state.error)
                 smsService.ban()
                 await tg.remove()
                 await this.pause(10) // TODO configure delay
@@ -215,7 +223,9 @@ export default class MainService {
             await this.pause(5)     // TODO configure delay
             return;
         } catch (e) {
-            log("error", e)
+            log("error",state.phone, e)
+            if(e.message === "PHONE_NUMBER_BANNED")
+                smsService.ban();
             if (tg !== null)
                 await tg.remove()
             await this.pause(10)    // TODO configure delay
@@ -243,7 +253,7 @@ export default class MainService {
                 }
                 targetchat = await TargetChat.findOne({$and: [{"appoinet": 0}, {"active": true}]});
                 if (!targetchat) {
-                    log("error", "NO_EMPTY_CHATS")
+                    log("error", phone.number, "NO_EMPTY_CHATS")
                     await tg.done();
                     return;
                 }
@@ -255,7 +265,7 @@ export default class MainService {
                 log("join", phone.number, targetchat.link)
                 chat = await tg.joinChat(targetchat, 40)
                 if (!chat) {
-                    log("join fail")
+                    log("join fail",phone.number)
                 } else {
                     let type = null;
                     if (chat._ === "channel") {
@@ -279,11 +289,11 @@ export default class MainService {
                     )
                     phone.seen = new Date();
                     await phone.save();
-                    log("JOIN OK")
+                    log("JOIN OK",phone.number)
                 }
             } catch (e) {
                 console.log(e)
-                log("error", e)
+                log("error", phone.number, e)
                 if (e.message === "INVITE_HASH_EXPIRED" ||
                     e.message === "USERNAME_NOT_OCCUPIED" ||
                     e.message === "USERNAME_INVALID" ||
@@ -353,11 +363,12 @@ export default class MainService {
                     await phone.save();
                     task.sent++;
                     await task.save()
-                    log("SEND OK")
-                    await this.pause(1)
+                    log("SEND OK", phone.number)
+                    await this.pause(3)
                 } catch (ex) {
-                    log("error",ex)
-                    if(ex.message === "USER_DEACTIVATED"){
+                    log("error",phone.number, ex)
+                    if(ex.message === "USER_DEACTIVATED"
+                    || ex.message === "USER_BANNED_IN_CHANNEL"){
                         phone.error = ex.message
                         phone.active = false
                         await phone.save()
@@ -369,11 +380,12 @@ export default class MainService {
                         await targetChat.save();
                         phone.sent++;
                         await phone.save()
+                        await this.pause(3)
                     }
                 }
             }
         } catch (e) {
-            log("error", e)
+            log("error",phone.number, e)
             phone.active = false
             phone.error = e.message
             await phone.save();
@@ -447,9 +459,6 @@ export default class MainService {
             info("%d %s %d", (new Date()).getTime(), "<mainloop", this.__workerId)
         } else
             info("%d %s %d", (new Date()).getTime(), "=skip", this.__workerId)
-        // if (!this.__mainLoopIdle) {
-        //     this.__mainLoopIdle = setInterval(this.loopMain, 501)
-        // }
         await Util.pause(500, true)
         this.loopMain();
     }
