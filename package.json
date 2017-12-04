@@ -1,6 +1,6 @@
 {
   "name": "tgspam",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "Telegram spam system",
   "main": "index.js",
   "author": "unger1984",
