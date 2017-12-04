@@ -14,16 +14,18 @@ const router = new Router({prefix: "/phones"});
 
 router.use(body());
 router.post("/activate", async ctx => {
-    if (ctx.request.body.number) {
-        const tg = new Telegram(__dirname+"/../auth/"+ctx.request.body.number+".auth")
-        try{
-
-        }catch(e){
-            ctx.body = {status: false, error: e}
+    if (ctx.request.body.id) {
+        const phone = await Phone.findOne({_id: mongoose.Types.ObjectId(ctx.request.body.id)})
+        if(!phone){
+            ctx.body = {status: false, error: "not found"}
+            return
         }
+        phone.active = true;
+        await phone.save();
+        ctx.body = {status: true}
         return
     }
-    ctx.body = {status: false}
+    ctx.body = {status: false, error: "not found id"}
 })
 
 router.get("/list",async ctx => {

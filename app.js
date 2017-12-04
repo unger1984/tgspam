@@ -9,8 +9,6 @@ import Router from 'koa-router'
 import config from './config'
 import api from './routes'
 
-import MainService from './services/MainService'
-
 require('./init')
 
 const app = new Koa();
@@ -43,7 +41,6 @@ http.createServer(app.callback())
     .listen(config.server.port, (err) => {
         if (err) throw err;
         console.log("Server started");
-        setTimeout(() => MainService.getInstance().isStart(), 5001) // start service after 5 sec
     })
     .on('connection', (socket) => {
         socket.setNoDelay(); // Отключаем алгоритм Нагла.

@@ -275,3 +275,9 @@ tr.red td {
 .deactivate {
     color: rgb(127,127,127);
 }
+
+.rowbutton{
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}

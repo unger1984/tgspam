@@ -1,0 +1,20 @@
+{
+  // Applications part
+  "apps": [
+    {
+      "name": "APP",
+      "script": "index_app.js",
+      "env": {
+
+      }
+    },
+    {
+      "name": "Worker",
+      "script": "index_worker.js",
+      "env": {
+
+      },
+      "instances": "3"
+    }
+  ]
+}

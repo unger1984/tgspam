@@ -27,7 +27,7 @@ const template = async (path, data) => {
 const startSources = async () => {
     $('#filter').addClass("deactivate")
     $('#smservice').prop('disabled', true)
-    $('#maessage').prop('disabled',true)
+    $('#maessage').prop('disabled', true)
     $('#country').prop('disabled', true)
     $('#count').prop('disabled', true)
     $('#capacity').prop('disabled', true)
@@ -40,7 +40,7 @@ const startSources = async () => {
         $('#filter').removeClass("deactivate")
         $('#smservice').prop('disabled', false)
         $('#country').prop('disabled', false)
-        $('#maessage').prop('disabled',false)
+        $('#maessage').prop('disabled', false)
         $('#count').prop('disabled', false)
         $('#capacity').prop('disabled', false)
         $('#start').prop('disabled', false)
@@ -74,7 +74,7 @@ const startSources = async () => {
             $('#filter').removeClass("deactivate")
             $('#smservice').prop('disabled', false)
             $('#country').prop('disabled', false)
-            $('#maessage').prop('disabled',false)
+            $('#maessage').prop('disabled', false)
             $('#count').prop('disabled', false)
             $('#capacity').prop('disabled', false)
             $('#start').prop('disabled', false)
@@ -102,7 +102,7 @@ const stopSources = async () => {
     $('#filter').removeClass("deactivate")
     $('#smservice').prop('disabled', false)
     $('#country').prop('disabled', false)
-    $('#maessage').prop('disabled',false)
+    $('#maessage').prop('disabled', false)
     $('#count').prop('disabled', false)
     $('#capacity').prop('disabled', false)
     $('#start').prop('disabled', false)
@@ -136,7 +136,7 @@ const updateLog = async () => {
                 $('#count').prop('disabled', true)
                 $('#capacity').prop('disabled', true)
                 $('#start').prop('disabled', true)
-                $('#maessage').prop('disabled',false)
+                $('#maessage').prop('disabled', false)
                 $('#start').html('Старт');
                 $('#stop').prop('disabled', false)
             } else {
@@ -144,7 +144,7 @@ const updateLog = async () => {
                 $('#filter').removeClass("deactivate")
                 $('#smservice').prop('disabled', false)
                 $('#country').prop('disabled', false)
-                $('#maessage').prop('disabled',true)
+                $('#maessage').prop('disabled', true)
                 $('#count').prop('disabled', false)
                 $('#capacity').prop('disabled', false)
                 $('#start').prop('disabled', false)
@@ -169,10 +169,21 @@ const updateSources = async () => {
                 if (phone.active) {
                     $('#tr_' + phone._id).removeClass("red")
                     $('#tr_' + phone._id).addClass("green")
+                    $(tds[6]).prop('colspan', 2)
+                    if (tds.length === 8) {
+                        $(tds[7]).remove();
+                    }
                 } else {
                     $('#tr_' + phone._id).addClass("red")
                     $('#tr_' + phone._id).removeClass("green")
+                    $(tds[6]).prop('colspan', 1)
+                    if (tds.length < 8) {
+                        $('#tr_' + phone._id).append('<td><img data-id="' + phone._id + '" id="retry" src="/img/retry.png" class="rowbutton"></td>')
+                    }else{
+                        $(tds[7]).find('img').prop('src','/img/retry.png')
+                    }
                 }
+
 
             } else {
                 // еще нет такого
@@ -185,8 +196,10 @@ const updateSources = async () => {
                     '        <td>' + _.template.formatDateTime(phone.created) + '</td>' +
                     '        <td>' + (phone.joinedchat.length + " / " + phone.max) + '</td>' +
                     '        <td>' + phone.sent + '</td>' +
-                    '        <td>' + (phone.active ? (phone.last ? _.template.formatDateTime(phone.last) : "") : phone.error) + '</td>' +
-                    '    </tr>');
+                    '        <td ' + (phone.active ? 'colspan="2"' : '') + '>' + (phone.active ? (phone.last ? _.template.formatDateTime(phone.last) : "") : phone.error) + '</td>' +
+                    (!phone.active ? '<td><img data-id="' + phone._id + '" src="/img/retry.png" class="rowbutton retry"></td>' : '') +
+                    '    </tr>'
+                );
             }
         }
         // delete all failds
@@ -207,6 +220,30 @@ const updateSources = async () => {
             console.log(e)
         }
     }
+    $('.retry').click((e) => {
+        e.preventDefault();
+        $(e.target).prop('src', '/img/preloader.gif');
+        let id = $(e.target).data('id')
+
+        $.ajax({
+            url: "/api/phones/activate",
+            method: "POST",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify({id: id})
+        })
+            .then(r => {
+                console.log(r);
+                if (r.status) {
+
+                } else {
+                    alert('Что-то пошло не так')
+                }
+            })
+            .catch(e => {
+                console.log(e);
+            })
+    })
 
 }
 
@@ -318,6 +355,30 @@ const getSources = async () => {
             $('#log').html('')
             lastLog = null;
         })
+    })
+    $('.retry').click((e) => {
+        e.preventDefault();
+        $(e.target).prop('src', '/img/preloader.gif');
+        let id = $(e.target).data('id')
+
+        $.ajax({
+            url: "/api/phones/activate",
+            method: "POST",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify({id: id})
+        })
+            .then(r => {
+                console.log(r);
+                if (r.status) {
+
+                } else {
+                    alert('Что-то пошло не так')
+                }
+            })
+            .catch(e => {
+                console.log(e);
+            })
     })
     idleInterval = setInterval(updateSources, interval)
 }

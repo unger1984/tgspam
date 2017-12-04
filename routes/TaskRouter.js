@@ -6,9 +6,8 @@ import body from 'koa-json-body'
 import Task from '../models/Task'
 import TargetChat from "../models/TargetChat";
 
-import MainService from '../services/MainService'
-
 const router = new Router({prefix: "/tasks"});
+import log from '../utils/mongo-logger'
 
 router.use(body());
 
@@ -33,14 +32,15 @@ router.post("/start",async ctx => {
         task = new Task({smservice: ntask.smservice,country: ntask.country, count: ntask.count, capacity: ntask.capacity, message: ntask.message})
         await task.save()
     }else{
+        task.active = true;
         task.smservice = ntask.smservice
         task.country = ntask.country
         task.count = ntask.count
         task.capacity = ntask.capacity
         task.message = ntask.message
         await task.save()
+        log("Start task")
     }
-    await MainService.getInstance().start();
     ctx.body = {status: true}
 })
 
@@ -68,7 +68,9 @@ router.post("/stop",async ctx => {
         ctx.body = {status: false, error: "no tasks"}
         return;
     }
-    await MainService.getInstance().stop();
+    task.active = false;
+    await task.save()
+    log("Stop task")
     ctx.body = {status: true}
 })
 
