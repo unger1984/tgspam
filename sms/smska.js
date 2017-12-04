@@ -90,7 +90,7 @@ export default class SMSka {
             }
         }catch(ex){
             this.state.error = "SERVER_ERROR";
-            throw new Error("SERVER_ERROR", res.status);
+            throw new Error("SERVER_ERROR", this.state.error);
         }
     }
 

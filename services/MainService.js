@@ -17,6 +17,7 @@ import SIMSms from '../sms/simsms'
 import SMSActivate from '../sms/sms-activate'
 import SMSka from '../sms/smska'
 import SMSReg from '../sms/sms-reg'
+import SIMOnline from '../sms/onlinesim'
 import log from '../utils/mongo-logger'
 import Util from '../utils'
 import FakeSMS from "../fake/fakesms";
@@ -121,6 +122,9 @@ export default class MainService {
                     break;
                 case 'sms-reg':
                     smsService = new SMSReg(isDebug);
+                    break;
+                case 'onlinesms':
+                    smsService = new SIMOnline(isDebug);
                     break;
                 case 'simsms':
                 default:

@@ -237,6 +237,9 @@ const getCountryes = (smsservice, country) => {
             opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
                 '                <option value="ua" ' + (country === "ua" ? "selected" : "") + '>Украина</option>'
             break;
+        case 'onlinesms':
+            opts = '<option value="all" ' + (country === "al" ? "selected" : "") + '>Любая</option>';
+            break;
         case 'sms-activate':
         default:
             opts = '<option value="ru" ' + (country === "ru" ? "selected" : "") + '>Россия</option>' +
