@@ -1,7 +1,26 @@
 <div class="form">
-    <span>Сообщение:</span>
-    <textarea id="maessage"><%=task.message%></textarea>
     <div id="filter" class="line <%=(task.active?"deactivate":"")%>">
+        <span>
+            Тип:
+            <select id="type" <%=(task.active?"disabled":"")%>>
+                <option value="message" selected>Сообщение</option>
+                <option value="repost" disabled>Репост</option>
+            </select>
+        </span>
+        <span>
+            Алгоритм:
+            <select id="algoritm" <%=(task.active?"disabled":"")%>>
+                <option value="full" <%=(task.algoritm==="full"?"selected":"")%>>Полный</option>
+                <option value="reg-only" <%=(task.algoritm==="reg-only"?"selected":"")%>>Только зарегистрировать</option>
+                <option value="join-only" <%=(task.algoritm==="join-only"?"selected":"")%>>Только зайти в чаты</option>
+                <option value="spam-only" <%=(task.algoritm==="spam-only"?"selected":"")%>>Только разослать</option>
+                <option value="reg-join" <%=(task.algoritm==="reg-join"?"selected":"")%>>Зарегистрировать и зайти</option>
+            </select>
+        </span>
+        <div>
+            <span>Сообщение:</span>
+            <textarea id="maessage"><%=task.message%></textarea>
+        </div>
         <span>
             SIM сервис:
             <select id="smservice" <%=(task.active?"disabled":"")%>>
@@ -10,37 +29,38 @@
                 <option value="sim5" <%=(task.smservice==="sim5"?"selected":"")%>>5sim.net</option>
                 <option value="sms-reg" <%=(task.smservice==="sms-reg"?"selected":"")%>>sms-reg.org</option>
                 <option value="smska" <%=(task.smservice==="smska"?"selected":"")%>>smska.net</option>
-            <option value="onlinesms" <%=(task.smservice==="onlinesms"?"selected":"")%>>onlinesms.ru</option>
+                <option value="onlinesms" <%=(task.smservice==="onlinesms"?"selected":"")%>>onlinesms.ru</option>
             </select>
         </span>
-            <span>
+        <span>
             Страна:
             <select id="country" <%=(task.active?"disabled":"")%>>
                 <%=task.countryes%>
             </select>
         </span>
-            <span>
+        <span>
             Количество:
             <input type="number" id="count" value="<%=task.count%>" <%=(task.active?"disabled":"")%> style="width: 50px" required>
         </span>
-            <span>
+        <span>
             Емкость:
-            <input type="number" id="capacity" value="<%=task.capacity%>" <%=(task.active?"disabled":"")%> style="width: 50px" required>
+            <input type="number" id="max" value="<%=task.max%>" <%=(task.active?"disabled":"")%> style="width: 50px" required>
         </span>
-            <span>
+
+        <span>
             <button class="button-small" id="start" <%=(task.active?"disabled":"")%>>Старт</button>
+        </span>
+        <span>
+            <button class="button-small" id="stop" <%=(task.active?"":"disabled")%>>Стоп</button>
         </span>
     </div>
     <span>
-        <button class="button-small" id="stop" <%=(task.active?"":"disabled")%>>Стоп</button>
+        <button class="button-small" id="clearlog">Очистить лог</button>
     </span>
-<span>
-            <button class="button-small" id="clearlog">Очистить лог</button>
-        </span>
 </div>
 <div id="progress">
     <span>Прогресс: </span>
-
+    <span id="counter"><%=sent%> / <%=good%> / <%=joined%> / <%=total%></span>
     <div>
         <div id="log">
 

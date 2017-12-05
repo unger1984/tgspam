@@ -8,7 +8,6 @@
         <th>Цель</th>
         <th>Создан</th>
         <th>Номер</th>
-        <th>Отправлено</th>
         <th>Последняя отправка</th>
     </tr>
     <%
@@ -21,8 +20,7 @@
         </td>
         <td class="text-left"><%=(chat.type === "hash"?"joinchat":"name")%>:<%=chat.link%></td>
         <td><%=_.template.formatDateTime(chat.created)%></td>
-        <td><%=(chat.appoinet===0?"":"+"+chat.appoinet)%></td>
-        <td><%=chat.sent%></td>
+        <td><%=(chat.number===0?"":"+"+chat.number)%></td>
         <td><%=(chat.active?(chat.last ? _.template.formatDateTime(chat.last) : ""):chat.error)%></td>
     </tr>
     <%

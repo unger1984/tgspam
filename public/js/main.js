@@ -127,7 +127,7 @@ const updateLog = async () => {
     }
     res = await $.ajax("/api/tasks");
     if (res.status) {
-        $('#counter').html(res.task.sent + " / " + res.good + " / " + res.total);
+        $('#counter').html(res.sent + " / " + res.good + " / " + res.joined + " / " + res.total);
         if (taskActive !== res.task.active) {
             if (res.task.active) {
                 $('#filter').addClass("deactivate")
@@ -297,7 +297,7 @@ const getSources = async () => {
     let tasks = await $.ajax("/api/tasks");
     tasks.task.countryes = getCountryes(tasks.task.smservice, tasks.task.country)
     taskActive = tasks.task.active;
-    await template("sources", {items: res.list, task: tasks.task, good: tasks.good, total: tasks.task.total})
+    await template("sources", {items: res.list, task: tasks.task, sent: tasks.sent, good: tasks.good, joined: tasks.joined, total: tasks.total})
 
     updateLog();
     $('#clear').click(e => {
@@ -389,9 +389,8 @@ const updateTargets = async () => {
         for (let i = 0; i < res.list.length; i++) {
             let chat = res.list[i];
             let tds = $('#tr_' + chat._id).children('td').toArray();
-            $(tds[4]).html(chat.appoinet === 0 ? "" : "+" + chat.appoinet)
-            $(tds[5]).html(chat.sent)
-            $(tds[6]).html(chat.active ? (chat.last ? _.template.formatDateTime(chat.last) : "") : chat.error)
+            $(tds[4]).html(chat.number === 0 ? "" : "+" + chat.number)
+            $(tds[5]).html(chat.active ? (chat.last ? _.template.formatDateTime(chat.last) : "") : chat.error)
             if (chat.active) {
                 $('#tr_' + chat._id).removeClass("red")
                 $('#tr_' + chat._id).addClass("green")
@@ -410,6 +409,7 @@ const getTargets = async () => {
     $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
     let res = await $.ajax("/api/chats/list")
     await template("targets", {items: res.list})
+
     $('#submit').click((e) => {
         e.preventDefault();
         let list = $('#list').val().split("\n");
@@ -462,107 +462,6 @@ const getTargets = async () => {
         }
     })
     idleInterval = setInterval(updateTargets, interval)
-}
-
-const startSpam = async () => {
-    $('#start').prop('disabled', true)
-    $('#start').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
-
-    let message = $('#maessage').val().trim()
-    if (message.length <= 0) {
-        alert("Сообщение не должно быть пустым!");
-        $('#start').html('Старт');
-        $('#stop').prop('disabled', true)
-        $('#start').prop('disabled', false)
-    } else {
-
-        let task = {
-            message: message
-        }
-
-        let res = await $.ajax({
-            url: "/api/tasks/spam",
-            method: "POST",
-            dataType: 'json',
-            contentType: "application/json; charset=utf-8",
-            data: JSON.stringify({task: task})
-        })
-
-        if (res.status) {
-            taskActive = true;
-
-            $('#start').html('Старт');
-            $('#stop').prop('disabled', false)
-        } else {
-            alert(res.error);
-            $('#start').html('Старт');
-            $('#stop').prop('disabled', true)
-            $('#start').prop('disabled', false)
-        }
-    }
-}
-
-const stopSpam = async () => {
-    $('#stop').prop('disabled', true);
-    $('#stop').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
-
-    let res = await $.ajax({
-        url: "/api/tasks/stop",
-        method: "POST",
-        contentType: "application/json; charset=utf-8",
-    })
-
-    console.log(res);
-
-    taskActive = false;
-
-    $('#stop').html('Стоп');
-    $('#start').prop('disabled', false)
-    $('#stop').prop('disabled', true)
-}
-
-const updateSpams = async () => {
-    updateLog();
-    let res = await $.ajax("/api/tasks");
-
-    if (res.status) {
-        $('#counter').html(res.task.sent + " / " + res.total);
-    }
-}
-
-const getSpams = async () => {
-    if (idleInterval !== null)
-        clearInterval(idleInterval)
-    lastLog = null;
-
-    $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
-    let tasks = await $.ajax("/api/tasks");
-    tasks.task.countryes = getCountryes(tasks.task.smservice, tasks.task.country)
-    taskActive = tasks.task.active;
-    await template("spams", {task: tasks.task, total: tasks.total})
-
-    updateLog();
-
-    $('#start').click((e) => {
-        e.preventDefault();
-        startSpam();
-    })
-    $('#stop').click((e) => {
-        e.preventDefault();
-        stopSpam();
-    })
-    $('#clearlog').click((e) => {
-        e.preventDefault()
-        $.ajax({
-            url: "/api/logs",
-            method: "DELETE"
-        }).then(r => {
-            $('#log').html('')
-            lastLog = null;
-        })
-    })
-
-    idleInterval = setInterval(updateSpams, interval)
 }
 
 const updateProxys = async () => {
@@ -624,9 +523,6 @@ $(function () {
                 break;
             case "targets":
                 getTargets();
-                break;
-            case "spams":
-                getSpams();
                 break;
             case "proxys":
                 getProxys();

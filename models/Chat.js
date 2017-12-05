@@ -2,7 +2,7 @@
 
 import mongoose from 'mongoose'
 
-const TargetChat = mongoose.Schema({
+const Chat = mongoose.Schema({
     created: {type: Date, default: Date.now, required: true},                   // date when chat created in system
     link: {type: mongoose.Schema.Types.String, required: true},                 // Link to chat (http://t.me/...)
     type: {type: mongoose.Schema.Types.String, required: true},                 // Type of link (public|private)
@@ -17,4 +17,4 @@ const TargetChat = mongoose.Schema({
     lock: {type: mongoose.Schema.Types.Boolean, default: false, required: true},
 })
 
-export default mongoose.model("TargetChat",TargetChat)
+export default mongoose.model("Chat",Chat)

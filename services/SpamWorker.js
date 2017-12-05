@@ -6,7 +6,7 @@ import config from "../config";
 import log from "../utils/mongo-logger";
 import Telegram from "../telegram";
 import FakeTelegram from "../fake/telegram";
-import TargetChat from "../models/TargetChat";
+import Chat from "../models/Chat";
 import Phone from "../models/Phone";
 import fs from "fs-extra";
 
@@ -22,6 +22,8 @@ export default class SpamWorker {
     __workerId = null
     __TelegramClient = null;
 
+    phone = null
+
     constructor() {
         this.__workerId = Util.randomInteger(100, 999)
     }
@@ -33,6 +35,13 @@ export default class SpamWorker {
             // kill worker, it was hanging
             log("error", "telegram hanging " + this.__timecounter + "sec, try kill it...")
             fs.removeSync(SpamWorker.lockFilePath + "/spamloop.lock")
+
+            // Unlock task
+            if(this.phone!==null){
+                this.phone.lock = false
+                await this.phone.save()
+            }
+
             log("telegram killed")
             process.exit(1)
         }
@@ -61,45 +70,34 @@ export default class SpamWorker {
 
     run = async (phone) => {
         this.__timecounter = 0
+        this.phone = phone
         this.__hangingTimer()
-        const res = await this.__worker(phone)
+        const res = await this.__worker()
         this.__isDone = true;
         return res;
     }
 
-    __worker = async (phone) => {
-        // check not fool capacity
-        if (await Phone.count({
-                $and: [
-                    {$where: "this.joinedchat.length < this.max"},
-                    {"active": true}
-                ]
-            }) > 0) return;
-
+    __worker = async () => {
         if (!await this.__isTaskActive()) return
 
         let targetchats = await TargetChat.find({
             $and: [
-                {"appoinet": phone.number},
+                {"appoinet": this.phone.number},
                 {"issent": false},
                 {"active": true}
             ]
         })
         if (!targetchats || targetchats.length <= 0) {
             log("error", "no active chat for", phone.number)
-            let list = phone.joinedchat;
-            list.pop()
-            phone.joinedchat = list;
-            await phone.save();
             return
         }
-        let targetChat = null;
         const task = await this.__getTask();
+        let targetChat = null
         try {
             if (config.fake) {
-                this.__TelegramClient = new FakeTelegram('./auth/' + phone.number + '.auth');
+                this.__TelegramClient = new FakeTelegram('./auth/' + this.phone.number + '.auth');
             } else {
-                this.__TelegramClient = new Telegram('./auth/' + phone.number + '.auth');
+                this.__TelegramClient = new Telegram('./auth/' + this.phone.number + '.auth');
             }
             for (let i = 0; i < targetchats.length; i++) {
                 if (!await this.__isTaskActive()) {
@@ -109,50 +107,47 @@ export default class SpamWorker {
                 }
 
                 targetChat = targetchats[i];
-                log("send msg", phone.number, targetChat.link)
+                log("send msg", this.phone.number, targetChat.link)
                 try {
                     if (targetChat.channel_id)
                         await this.__TelegramClient.messageToChat(task.message, targetChat.channel_id, targetChat.access_hash)
                     else if (targetChat.chat_id)
                         await this.__TelegramClient.messageToChat(task.message, targetChat.chat_id);
 
-                    targetChat.sent++
                     targetChat.issent = true
                     targetChat.last = new Date();
                     await targetChat.save()
-                    phone.sent++
-                    phone.seen = new Date();
-                    await phone.save();
-                    task.sent++;
-                    await task.save()
-                    log("SEND OK", phone.number)
+                    this.phone.sent++
+                    this.phone.seen = new Date();
+                    await this.phone.save();
+                    log("SEND OK", this.phone.number)
                     await this.pause(1)         // TODO configure delay
                     this.__timecounter = 0
                 } catch (ex) {
-                    log("error", phone.number, ex)
+                    log("error", this.phone.number, ex)
                     if (ex.message === "USER_DEACTIVATED"
                         || ex.message === "USER_BANNED_IN_CHANNEL") {
-                        phone.error = ex.message
-                        phone.active = false
-                        await phone.save()
+                        this.phone.error = ex.message
+                        this.phone.active = false
+                        await this.phone.save()
                         this.__TelegramClient.done();
                         return;
                     } else {
                         targetChat.active = false
                         targetChat.error = ex.message
                         await targetChat.save();
-                        phone.sent++;
-                        await phone.save()
+                        this.phone.sent++;
+                        await this.phone.save()
                         await this.pause(1)     // TODO configure delay
                         this.__timecounter = 0
                     }
                 }
             }
         } catch (e) {
-            log("error", phone.number, e)
-            phone.active = false
-            phone.error = e.message
-            await phone.save();
+            log("error", this.phone.number, e)
+            this.phone.active = false
+            this.phone.error = e.message
+            await this.phone.save();
             if (this.__TelegramClient !== null)
                 this.__TelegramClient.done();
             return;

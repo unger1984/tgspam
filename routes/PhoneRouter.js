@@ -5,7 +5,7 @@ import body from 'koa-json-body'
 import mongoose from 'mongoose'
 import {emptyDirSync, removeSync} from 'fs-extra';
 
-import TargetChat from '../models/TargetChat'
+import Chat from '../models/Chat'
 import Phone from '../models/Phone'
 import Telegram from '../telegram'
 import Task from "../models/Task";
@@ -13,6 +13,10 @@ import Task from "../models/Task";
 const router = new Router({prefix: "/phones"});
 
 router.use(body());
+
+/**
+ * Set phone active
+ */
 router.post("/activate", async ctx => {
     if (ctx.request.body.id) {
         const phone = await Phone.findOne({_id: mongoose.Types.ObjectId(ctx.request.body.id)})
@@ -28,11 +32,17 @@ router.post("/activate", async ctx => {
     ctx.body = {status: false, error: "not found id"}
 })
 
+/**
+ * Get list of phones
+ */
 router.get("/list",async ctx => {
     let list = await Phone.find({});
     ctx.body = {status: true, list: list}
 })
 
+/**
+ * Remove phones by ids
+ */
 router.put("/",async ctx => {
     if (ctx.request.body.list && ctx.request.body.list.length>0) {
         let task = await Task.findOne({});
@@ -46,7 +56,7 @@ router.put("/",async ctx => {
             ids.push(mongoose.Types.ObjectId(list[i]))
         let phones = await Phone.find({'_id': {$in: ids}})
         for(let i=0; i<phones.length; i++) {
-            await TargetChat.update({"appoinet":phones[i].number},{"$set":{"active": true, "appoinet":0, "sent": 0, "issent": false, "last": undefined}},{multi: true})
+            await Chat.update({"number":phones[i].number},{"$set":{"active": true, "number":0, "issent": false, "last": undefined}},{multi: true})
             removeSync(__dirname + "/../auth/" + phones[i].number + ".auth");
             task.sent = task.sent - phones[i].sent
         }
@@ -66,7 +76,7 @@ router.delete("/list",async ctx => {
         return
     }
     for(let i=0; i<phones.length; i++) {
-        await TargetChat.update({"appoinet":phones[i].number},{"$set":{"active": true, "appoinet":0, "sent": 0, "issent": false, "last": undefined}},{multi: true})
+        await Chat.update({"number":phones[i].number},{"$set":{"active": true, "number":0, "issent": false, "last": undefined}},{multi: true})
         task.sent = task.sent - phones[i].sent
     }
     await task.save();

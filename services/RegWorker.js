@@ -50,7 +50,7 @@ export default class RegWorker {
     __getTask = async () => {
         let task = await Task.findOne({});
         if (!task) {
-            task = new Task({smservice: 'simsms', country: 'ru', count: 10, capacity: 10, active: false})
+            task = new Task({smservice: 'simsms', country: 'ru', count: 10, max: 10, active: false})
         }
         return task
     }
@@ -66,15 +66,15 @@ export default class RegWorker {
         }
     }
 
-    run = async (smservice, country, capacity) => {
+    run = async (smservice, country, max) => {
         this.__timecounter = 0
         this.__hangingTimer()
-        const res = await this.__worker(smservice,country,capacity)
+        const res = await this.__worker(smservice,country,max)
         this.__isDone = true;
         return res;
     }
 
-    __worker = async (smservice, country, capacity) => {
+    __worker = async (smservice, country, max) => {
         if (!await this.__isTaskActive()) return
 
         const isDebug = false;
@@ -190,7 +190,7 @@ export default class RegWorker {
             let phone = new Phone({
                 number: state.phone,
                 user_id: auth.user.id,
-                max: capacity
+                max: max
             })
             await phone.save();
             smsService.done();

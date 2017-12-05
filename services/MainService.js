@@ -23,7 +23,7 @@ import Util from '../utils'
 import FakeSMS from "../fake/fakesms";
 import FakeTelegram from "../fake/telegram";
 import {generateFirstName, generateLastName} from "../utils/profile-util";
-import TargetChat from "../models/TargetChat";
+import TargetChat from "../models/Chat";
 
 import RegWorker from "./RegWorker";
 import JoinWorker from "./JoinWorker";
