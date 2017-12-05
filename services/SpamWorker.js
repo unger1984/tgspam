@@ -87,6 +87,10 @@ export default class SpamWorker {
         })
         if (!targetchats || targetchats.length <= 0) {
             log("error", "no active chat for", phone.number)
+            let list = phone.joinedchat;
+            list.pop()
+            phone.joinedchat = list;
+            await phone.save();
             return
         }
         let targetChat = null;
