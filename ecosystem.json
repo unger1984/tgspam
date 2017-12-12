@@ -9,12 +9,12 @@
       }
     },
     {
-      "name": "Worker",
-      "script": "index_worker.js",
+      "name": "reg_Worker",
+      "script": "index_worker_reg.js",
       "env": {
 
       },
-      "instances": "3"
+      "instances": "2"
     }
   ]
 }

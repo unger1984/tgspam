@@ -1,13 +1,14 @@
 'use strict'
 
 import Util from "../utils";
-import Task from "../models/Task";
 import config from "../config";
 import log from "../utils/mongo-logger";
 import Telegram from "../telegram";
 import FakeTelegram from "../fake/telegram";
 import Chat from "../models/Chat";
 import fs from "fs-extra";
+import redis from 'redis'
+import Phone from "../models/Phone";
 
 const debug = require('debug')('tgspam:debug:joinworker')
 
@@ -15,6 +16,8 @@ export default class JoinWorker {
 
     static lockFilePath = './lock'
 
+    __isRuning = true
+    __isBusy = false
     __timecounter = 0
     __isDone = false
     __hangingTimeout = 20   // timeout in sec
@@ -26,6 +29,51 @@ export default class JoinWorker {
 
     constructor() {
         this.__workerId = Util.randomInteger(100, 999)
+        const subscriber = redis.createClient()
+        subscriber.on("message", async (channel, message) => {
+            debug("message",channel,message)
+            switch (channel) {
+                case "tgspam:join:stop":
+                    this.__isRuning = false
+                    break;
+                case "tgspam:join:start":
+                    this.__isRuning = true
+                    if (this.__isBusy) return;
+                    this.__isBusy = true;
+                    let phone = await Phone.findOne({
+                        $and: [
+                            {$where: "this.joinedchat.length < this.max"},
+                            {"active": true},
+                            {
+                                $or: [
+                                    {'seen': {$lte: new Date((new Date()).getTime() - 1 * 60 * 1000)}},
+                                    {'seen': {$exists: false}}
+                                ]
+                            }
+                        ]
+                    })
+                    break;
+                case "tgspam:join:join":
+                    if (this.__isRuning) {
+                        const msg = JSON.parse(message)
+                        const phone = await Phone.findOneAndUpdate({
+                            $and: [
+                                {"number": msg.number},
+                                {"active": true},
+                                {"lock": false}
+                            ]
+                        }, {$set: {"lock": true}}, {new: false})
+                        if(phone){
+                            this.run(phone)
+                        }
+                    }
+                    break;
+            }
+        })
+
+        subscriber.subscribe("tgspam:join:stop")
+        subscriber.subscribe("tgspam:join:start")
+        subscriber.subscribe("tgspam:join:join")
     }
 
     __hangingTimer = async () => {
@@ -37,12 +85,12 @@ export default class JoinWorker {
             fs.removeSync(JoinWorker.lockFilePath + "/joinloop.lock")
 
             // Unlock task
-            if(this.targetchat!==null){
+            if (this.targetchat !== null) {
                 this.targetchat.lock = false
                 await this.targetchat.save()
             }
 
-            if(this.phone!==null){
+            if (this.phone !== null) {
                 this.phone.lock = false
                 await this.phone.save()
             }
@@ -54,30 +102,20 @@ export default class JoinWorker {
         setTimeout(this.__hangingTimer, 1001)
     }
 
-    __getTask = async () => {
-        let task = await Task.findOne({});
-        if (!task) {
-            task = new Task({smservice: 'simsms', country: 'ru', count: 10, capacity: 10, active: false})
-        }
-        return task
-    }
-
-    __isTaskActive = async () => {
-        return (await this.__getTask()).active;
-    }
-
     run = async (phone) => {
-        this.__timecounter = 0
         this.phone = phone
+        this.__timecounter = 0
+        this.__isDone = false;
         this.__hangingTimer()
         const res = await this.__worker()
+        this.phone.lock = false
+        await this.phone.save()
         this.__isDone = true;
         return res;
     }
 
     __worker = async () => {
-        const task = await this.__getTask()
-        if (!task.active) {
+        if (!this.__isRuning) {
             return;
         }
 
@@ -101,7 +139,7 @@ export default class JoinWorker {
                 await this.__TelegramClient.done();
                 return;
             }
-            if (!await this.__isTaskActive()) {
+            if (!this.__isRuning) {
                 this.targetchat.lock = false
                 await this.targetchat.save();
                 await this.__TelegramClient.done()

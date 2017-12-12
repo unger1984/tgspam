@@ -2,12 +2,15 @@
 
 import Router from 'koa-router'
 import body from 'koa-json-body'
+import redis from 'redis'
 
 import Task from '../models/Task'
 import Chat from "../models/Chat";
+import Reg from "../models/Reg";
 
 const router = new Router({prefix: "/tasks"});
 import log from '../utils/mongo-logger'
+import Phone from "../models/Phone";
 
 router.use(body());
 
@@ -50,6 +53,17 @@ router.post("/start",async ctx => {
         await task.save()
         log("Start task")
     }
+    await Reg.remove({});
+
+    const pcount = await Phone.count()
+    for(let i=0; i<(task.count-pcount); i++){
+        let r = new Reg();
+        await r.save();
+    }
+
+    const publisher = redis.createClient()
+    publisher.publish("tgspam:reg:start","");
+
     ctx.body = {status: true}
 })
 
@@ -64,6 +78,8 @@ router.post("/stop",async ctx => {
     }
     task.active = false;
     await task.save()
+    const publisher = redis.createClient()
+    publisher.publish("tgspam:reg:stop","");
     log("Stop task")
     ctx.body = {status: true}
 })

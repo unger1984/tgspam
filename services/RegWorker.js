@@ -14,8 +14,10 @@ import FakeTelegram from "../fake/telegram";
 import SMSActivate from "../sms/sms-activate";
 import SIMSms from "../sms/simsms";
 import Phone from "../models/Phone";
+import Reg from "../models/Reg";
 import SIM5 from "../sms/5sim";
 import fs from "fs-extra";
+import redis from "redis";
 
 const debug = require('debug')('tgspam:debug:regworker')
 
@@ -23,6 +25,8 @@ export default class RegWorker {
 
     static lockFilePath = './lock'
 
+    __isRuning = true
+    __isBusy = false
     __timecounter = 0
     __isDone = false;
     __hangingTimeout = 5 * 60   // timeout in sec
@@ -31,10 +35,54 @@ export default class RegWorker {
 
     constructor() {
         this.__workerId = Util.randomInteger(100, 999)
+
+        const subscriber = redis.createClient()
+        subscriber.on("message", async (channel, message) => {
+            debug("message", channel, message)
+            switch (channel) {
+                case "tgspam:reg:stop":
+                    this.__isRuning = false
+                    break;
+                case "tgspam:reg:start":
+                    this.__isRuning = true
+                    if (this.__isBusy) return;
+                    this.__isBusy = true;
+                    let reg = await Reg.findOneAndUpdate({"lock": false}, {$set: {"lock": true}}, {new: false})
+                    while (reg) {
+                        let res = false;
+                        if (this.__isRuning) {
+                            res = await this.run(reg)
+                        }
+                        if (!res) {
+                            reg.lock = false
+                            await Reg.findOneAndRemove({_id: reg._id});
+                            if (!this.__isRuning) return;
+                        }else{
+                            await reg.remove();
+                        }
+                        reg = await Reg.findOneAndUpdate({"lock": false}, {$set: {"lock": true}}, {new: false})
+                    }
+                    this.__isBusy = false;
+                    break;
+                case "tgspam:reg:reg":
+                    if (this.__isRuning) {
+                        this.__isRuning = true
+                        const reg = await Reg.findOneAndUpdate({"lock": false}, {$set: {"lock": true}}, {new: false})
+                        if (reg) {
+                            this.run(reg)
+                        }
+                    }
+                    break;
+            }
+        })
+
+        subscriber.subscribe("tgspam:reg:stop")
+        subscriber.subscribe("tgspam:reg:start")
+        subscriber.subscribe("tgspam:reg:reg")
     }
 
     __hangingTimer = async () => {
-        if(this.__isDone) return;
+        if (this.__isDone) return;
         // debug("%d %d %s %d",(new Date()).getTime(), this.__workerId, "hangin tick",this.__timecounter)
         if (this.__timecounter >= this.__hangingTimeout) {
             // kill worker, it was hanging
@@ -66,16 +114,21 @@ export default class RegWorker {
         }
     }
 
-    run = async (smservice, country, max) => {
+    run = async (reg) => {
         this.__timecounter = 0
         this.__hangingTimer()
-        const res = await this.__worker(smservice,country,max)
+        const task = await this.__getTask();
+        this.__isDone = false;
+        let res = null
+        if (task.count > (await Phone.count({})) && this.__isRuning) {
+            res = await this.__worker(task.smservice, task.country, task.max)
+        }
         this.__isDone = true;
         return res;
     }
 
     __worker = async (smservice, country, max) => {
-        if (!await this.__isTaskActive()) return
+        if (!this.__isRuning) return false
 
         const isDebug = false;
         let smsService = null
@@ -108,14 +161,14 @@ export default class RegWorker {
         let balance = await smsService.getBalance();
         if (!balance) {
             log("error", smsService.state.error)
-            return;
+            return false;
         }
         if (parseInt(balance) < 10) {
             log("error", "Balance < 10");
             await this.pause(10)    // TODO configure delay
-            return;
+            return false;
         }
-        if (!await this.__isTaskActive()) return;
+        if (!this.__isRuning) return false;
 
         // Get Phone number
         let state = await smsService.getNumber(country);
@@ -124,7 +177,7 @@ export default class RegWorker {
             await this.pause(10) // TODO configure delay
             return false;
         }
-        if (!await this.__isTaskActive()) return;
+        if (!this.__isRuning) return false;
 
         // Telegram
         try {
@@ -143,10 +196,10 @@ export default class RegWorker {
                 await this.pause(10)
                 return false;
             }
-            if (!await this.__isTaskActive()) {
+            if (!this.__isRuning) {
                 log("break")
                 await this.__TelegramClient.remove()
-                return;
+                return false;
             }
 
             // Wait sms code
@@ -159,7 +212,7 @@ export default class RegWorker {
                 if (!await this.__isTaskActive()) {
                     log("break")
                     await this.__TelegramClient.remove()
-                    return;
+                    return false;
                 }
             }
             if (!sms) {
@@ -197,7 +250,7 @@ export default class RegWorker {
             await this.__TelegramClient.done();
             log("REG OK", phone.number)
             await this.pause(5)     // TODO configure delay
-            return;
+            return true;
         } catch (e) {
             log("error", state.phone, e)
             if (e.message === "PHONE_NUMBER_BANNED")

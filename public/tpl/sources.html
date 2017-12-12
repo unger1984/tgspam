@@ -91,7 +91,7 @@
         </td>
         <td class="text-left">+<%=phone.number%></td>
         <td><%=_.template.formatDateTime(phone.created)%></td>
-        <td><%=(phone.joinedchat.length+" / "+phone.max)%></td>
+        <td><%=(phone.joined+" / "+task.max)%></td>
         <td><%=phone.sent%></td>
         <td <%=(phone.active?"colspan='2'":'')%>><%=(phone.active?(phone.last ? _.template.formatDateTime(phone.last) : ""):phone.error)%></td>
         <%

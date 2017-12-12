@@ -52,7 +52,8 @@ const startSources = async () => {
             smservice: $('#smservice').val(),
             country: $('#country').val(),
             count: $('#count').val(),
-            capacity: $('#capacity').val(),
+            algoritm: $('#algoritm').val(),
+            max: $('#max').val(),
             message: message
         }
 
@@ -152,10 +153,11 @@ const updateLog = async () => {
             }
         }
     }
+    return res.task;
 }
 
 const updateSources = async () => {
-    updateLog();
+    const task = await updateLog();
     let res = await $.ajax("/api/phones/list")
     if (res.status) {
         for (let i = 0; i < res.list.length; i++) {
@@ -163,7 +165,7 @@ const updateSources = async () => {
             let tds = $('#tr_' + phone._id).children('td').toArray();
             if (tds.length > 0) {
                 $(tds[0]).html((i + 1))
-                $(tds[4]).html(phone.joinedchat.length + " / " + phone.max)
+                $(tds[4]).html(phone.joined + " / " + task.max)
                 $(tds[5]).html(phone.sent)
                 $(tds[6]).html(phone.active ? (phone.last ? _.template.formatDateTime(phone.last) : "") : phone.error)
                 if (phone.active) {
@@ -194,7 +196,7 @@ const updateSources = async () => {
                     '        </td>' +
                     '        <td class="text-left">+' + phone.number + '</td>' +
                     '        <td>' + _.template.formatDateTime(phone.created) + '</td>' +
-                    '        <td>' + (phone.joinedchat.length + " / " + phone.max) + '</td>' +
+                    '        <td>' + (phone.joined + " / " + task.max) + '</td>' +
                     '        <td>' + phone.sent + '</td>' +
                     '        <td ' + (phone.active ? 'colspan="2"' : '') + '>' + (phone.active ? (phone.last ? _.template.formatDateTime(phone.last) : "") : phone.error) + '</td>' +
                     (!phone.active ? '<td><img data-id="' + phone._id + '" src="/img/retry.png" class="rowbutton retry"></td>' : '') +

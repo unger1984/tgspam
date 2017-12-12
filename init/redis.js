@@ -4,7 +4,9 @@ import redis from 'redis'
 
 const RedisClient = redis.createClient()
 RedisClient.on("error", (e) => {
-    console.error("MongoDB ERROR", e)
+    console.error("Redis ERROR", e)
     process.exit(2)
 })
-console.log("Redis started")
+RedisClient.on("connect",()=>{
+    console.log("Redis started")
+})
