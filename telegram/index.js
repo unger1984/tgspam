@@ -3,14 +3,13 @@
 import MTProto from 'telegram-mtproto'
 import JsonStorage from './JsonStorage'
 
-const api = {
-    layer: 57,
-    api_id: 2899,
-    app_version: '1.4.1',
-    lang_code: 'en'
-}
-
 export default class Telegram {
+
+    // static API_ID = 22893;
+    // static API_HASH = "bfc342e48a7a0986b670777ed36fe0fb";
+
+    APP_ID = 0
+    APP_HASH = ""
 
     _client = null;
     _storage = null;
@@ -42,11 +41,20 @@ export default class Telegram {
         return this._client(method, params)
     }
 
-    constructor(filePath, timeout) {
+    constructor(auth, filePath, timeout) {
+
+        this.APP_ID = parseInt(auth.app_id)
+        this.APP_HASH = auth.app_hash
+
         this.timeout = timeout || 300
         this._storage = new JsonStorage(filePath);
         this._client = new MTProto({
-            api: api,
+            api: {
+                layer: 57,
+                api_id: this.APP_ID,
+                app_version: '1.4.1',
+                lang_code: 'en'
+            },
             server: {dev: false, webogram: false},
             app: {storage: this._storage}
         });
@@ -64,8 +72,8 @@ export default class Telegram {
         const {phone_registered, phone_code_hash} = await this.api("auth.sendCode", {
             phone_number: number,
             current_number: false,
-            api_id: api.api_id,
-            api_hash: "36722c72256a24c1225de00eb6a1ca74"
+            api_id: this.APP_ID,
+            api_hash: this.APP_HASH
         });
 
         return {phone_registered, phone_code_hash};

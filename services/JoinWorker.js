@@ -15,6 +15,11 @@ export default class JoinWorker {
 
     static lockFilePath = './lock'
 
+    Telegram_auth = {
+        app_id: "",
+        app_hash: "",
+    }
+
     __timecounter = 0
     __isDone = false
     __hangingTimeout = 20   // timeout in sec
@@ -22,8 +27,9 @@ export default class JoinWorker {
     __TelegramClient = null;
 
 
-    constructor() {
+    constructor(auth) {
         this.__workerId = Util.randomInteger(100, 999)
+        this.Telegram_auth = auth;
     }
 
     __hangingTimer = async () => {
@@ -70,7 +76,7 @@ export default class JoinWorker {
             if (config.fake) {
                 this.__TelegramClient = new FakeTelegram('./auth/' + phone.number + '.auth',20);
             } else {
-                this.__TelegramClient = new Telegram('./auth/' + phone.number + '.auth',20);
+                this.__TelegramClient = new Telegram(this.Telegram_auth, './auth/' + phone.number + '.auth',20);
             }
             targetchat = await TargetChat.findOne({$and: [{"appoinet": 0}, {"active": true}]});
             if (!targetchat) {

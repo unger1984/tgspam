@@ -16,14 +16,20 @@ export default class SpamWorker {
 
     static lockFilePath = './lock'
 
+    Telegram_auth = {
+        app_id: "",
+        app_hash: "",
+    }
+
     __timecounter = 0
     __isDone = false
     __hangingTimeout = 20   // timeout in sec
     __workerId = null
     __TelegramClient = null;
 
-    constructor() {
+    constructor(auth) {
         this.__workerId = Util.randomInteger(100, 999)
+        this.Telegram_auth = auth;
     }
 
     __hangingTimer = async () => {
@@ -95,7 +101,7 @@ export default class SpamWorker {
             if (config.fake) {
                 this.__TelegramClient = new FakeTelegram('./auth/' + phone.number + '.auth');
             } else {
-                this.__TelegramClient = new Telegram('./auth/' + phone.number + '.auth');
+                this.__TelegramClient = new Telegram(this.Telegram_auth,'./auth/' + phone.number + '.auth');
             }
             for (let i = 0; i < targetchats.length; i++) {
                 if (!await this.__isTaskActive()) {

@@ -28,6 +28,7 @@ import TargetChat from "../models/TargetChat";
 import RegWorker from "./RegWorker";
 import JoinWorker from "./JoinWorker";
 import SpamWorker from "./SpamWorker";
+import Settings from "../models/Settings";
 
 let instance = null
 
@@ -37,22 +38,35 @@ export default class MainService {
 
     __workerId = null
 
+    Telegram_auth = {
+        app_id: "",
+        app_hash: "",
+    }
+
     constructor() {
         if (!instance) {
             instance = this;
             instance.__workerId = Util.randomInteger(100, 999)
 
-            const init = () => {
+            const init = async () => {
                 debug("clean locks...")
                 fs.ensureDirSync(MainService.lockFilePath)
                 fs.removeSync(MainService.lockFilePath + "/regloop.lock")
                 fs.removeSync(MainService.lockFilePath + "/joinloop.lock")
                 fs.removeSync(MainService.lockFilePath + "/spamloop.lock")
 
+                let settings = await Settings.findOne({});
+                if(!settings){
+                    settings = new Settings({app_id: '',app_hash: ''})
+                }
+
+                instance.Telegram_auth.app_id = settings.app_id
+                instance.Telegram_auth.app_hash = settings.app_hash
+
                 debug("init done")
             }
             init();
-            setTimeout(instance.loopMain, 5001); // wait other workers
+            setTimeout(instance.loopMain, 10001); // wait other workers
         }
         return instance;
     }
@@ -112,7 +126,7 @@ export default class MainService {
 
         const task = await this.__getTask();
         if (task.count > (await Phone.count({}))) {
-            const worker = new RegWorker()
+            const worker = new RegWorker(this.Telegram_auth)
             await worker.run(task.smservice, task.country, task.capacity)
         }
         info("%d %d %s", (new Date()).getTime(), this.__workerId, "<reg")
@@ -136,7 +150,7 @@ export default class MainService {
             ]
         })
         if (phone) {
-            const worker = new JoinWorker();
+            const worker = new JoinWorker(this.Telegram_auth);
             await worker.run(phone);
         }
 
@@ -156,7 +170,7 @@ export default class MainService {
             .limit(1)
             .exec()
         if (phone) {
-            const worker  = new SpamWorker()
+            const worker  = new SpamWorker(this.Telegram_auth)
             await worker.run(phone);
         }
 

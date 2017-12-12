@@ -611,6 +611,38 @@ const getProxys = async () => {
     idleInterval = setInterval(updateProxys, interval)
 }
 
+const getSettings = async () => {
+    if (idleInterval !== null)
+        clearInterval(idleInterval)
+    lastLog = null;
+
+    $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
+    let settings = await $.ajax("/api/settings");
+
+    await template("settings", {settings: settings})
+
+    $('#save').click((e) => {
+        e.preventDefault()
+        let app_id = $('#app_id').val().trim();
+        let app_hash = $('#app_hash').val().trim();
+        if (app_id.length <= 0 || app_hash.length <= 0) {
+            alert('Заполните данные')
+            return
+        }
+        $.ajax({
+            url: "/api/settings",
+            method: "PUT",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify({app_id: app_id, app_hash: app_hash})
+        }).then(r => {
+            console.log(r)
+            getSettings();
+        })
+    })
+
+}
+
 $(function () {
     $('.menulink').click(function (e) {
         e.preventDefault();
@@ -630,6 +662,9 @@ $(function () {
                 break;
             case "proxys":
                 getProxys();
+                break;
+            case "settings":
+                getSettings();
                 break;
         }
     })

@@ -23,14 +23,20 @@ export default class RegWorker {
 
     static lockFilePath = './lock'
 
+    Telegram_auth = {
+        app_id: "",
+        app_hash: "",
+    }
+
     __timecounter = 0
     __isDone = false;
     __hangingTimeout = 5 * 60   // timeout in sec
     __workerId = null
     __TelegramClient = null;
 
-    constructor() {
+    constructor(auth) {
         this.__workerId = Util.randomInteger(100, 999)
+        this.Telegram_auth = auth;
     }
 
     __hangingTimer = async () => {
@@ -131,7 +137,7 @@ export default class RegWorker {
             // Try connect
             log("connect telegram")
             if (config.fake) this.__TelegramClient = new FakeTelegram('./auth/' + state.phone + '.auth');
-            else this.__TelegramClient = new Telegram('./auth/' + state.phone + '.auth');
+            else this.__TelegramClient = new Telegram(this.Telegram_auth,'./auth/' + state.phone + '.auth');
 
             // Try send code
             log("send code for " + state.phone)

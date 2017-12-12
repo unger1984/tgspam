@@ -5,10 +5,34 @@ import body from 'koa-json-body'
 import fetch from 'node-fetch'
 import {outputFileSync} from 'fs-extra'
 import {execSync} from 'child_process'
+import Settings from "../models/Settings";
 
 const router = new Router({prefix: "/settings"});
 
 router.use(body());
+
+router.get("/",async ctx => {
+    let settings = await Settings.findOne({});
+    if(!settings){
+        settings = new Settings({app_id: '',app_hash: ''})
+    }
+    ctx.body = settings
+})
+
+router.put("/",async ctx => {
+    let nsettings = ctx.request.body;
+
+    let settings = await Settings.findOne({});
+    if(!settings){
+        settings = new Settings({app_id: nsettings.app_id,app_hash: nsettings.app_hash})
+    }
+    settings.app_id = nsettings.app_id
+    settings.app_hash = nsettings.app_hash
+    await settings.save();
+
+    ctx.body = {status: true}
+})
+
 router.get("/proxy",async ctx => {
     try{
         let res = await fetch("http://"+ctx.hostname+"/ip.php",{method:"GET",timeout: 5001})
