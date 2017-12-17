@@ -106,6 +106,13 @@ export default class Telegram {
         return user;
     }
 
+    setName = async (name) => {
+        const user = await this.api("account.updateUsername", {
+            username: name
+        });
+        return user;
+    }
+
     exportAuthorization = async () => {
         const ex = await this.api("auth.exportAuthorization", {dc_id: 2})
         return ex
@@ -131,7 +138,7 @@ export default class Telegram {
         }
     }
 
-    joinChat = async (parsed_link) => {
+    joinChat = async (parsed_link, isFullInfo) => {
         let invite = null
         switch (parsed_link.type) {
             case "hash":
@@ -139,10 +146,14 @@ export default class Telegram {
                 await Telegram.pause(1);
                 let chat = null;
                 if (invite._ === "chatInviteAlready")
-                    chat = invite.chat;
+                    if (!isFullInfo)
+                        chat = invite.chat;
+                    else
+                        chat = invite
                 else if (invite._ === "chatInvite") { // need Join
                     chat = await this.api("messages.importChatInvite", {hash: parsed_link.link})
-                    chat = chat.chats[0];
+                    if (!isFullInfo)
+                        chat = chat.chats[0];
                 }
                 return chat;
             case "channel":
@@ -158,7 +169,8 @@ export default class Telegram {
                                 access_hash: invite.chats[0].access_hash
                             }
                         })
-                    chat = chat.chats[0];
+                    if (!isFullInfo)
+                        chat = chat.chats[0];
                     return chat;
                 } else {
                     throw new Error("NO_CHANNEL", 400)
@@ -166,6 +178,29 @@ export default class Telegram {
                 return false;
         }
         return false
+    }
+
+    getChat = async (chat_id, access_hash) => {
+        let info = null
+        if (access_hash) {
+            info = await this.api("channels.getParticipants",
+                {
+                    channel: {
+                        _: 'inputPeerChannel',
+                        channel_id: chat_id,
+                        access_hash: access_hash
+                    },
+                    filter: {_: 'channelParticipantsRecent'},
+                    offset: 0,
+                    limit: 9999999,
+                })
+        } else {
+            info = await this.api("messages.getFullChat",
+                {
+                    chat_id: chat_id
+                })
+        }
+        return info
     }
 
     joinChatByLink = async (link) => {
@@ -222,6 +257,38 @@ export default class Telegram {
                     random_id: (Math.floor(Math.random() * 100000) + 3)
                 })
         }
+        return message
+    }
+
+    messageToUser = async (text, user_id, access_hash) => {
+        let message = null
+        message = await this.api("messages.sendMessage",
+            {
+                peer: {
+                    _: 'inputPeerUser',
+                    user_id: user_id,
+                    access_hash: access_hash
+                },
+                message: text,
+                random_id: (Math.floor(Math.random() * 100000) + 4)
+            })
+        return message
+    }
+
+    setAbout = async (user_id, about) => {
+        let message = await this.api("account.updateProfile",
+            {
+                flags: 0x00000004,
+                about: about
+            })
+        return message
+    }
+
+    readMessages = async (id) => {
+        let message = await this.api("messages.receivedMessages",
+            {
+                max_id: id
+            })
         return message
     }
 

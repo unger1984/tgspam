@@ -8,10 +8,11 @@ import Telegram from "../telegram";
 import FakeTelegram from "../fake/telegram";
 import TargetChat from "../models/TargetChat";
 import fs from "fs-extra";
+import TargetUser from "../models/TargetUser";
 
-const debug = require('debug')('tgspam:debug:joinworker')
+const debug = require('debug')('tgspam:debug:pmjoinworker')
 
-export default class JoinWorker {
+export default class PmJoinWorker {
 
     static lockFilePath = './lock'
 
@@ -33,12 +34,12 @@ export default class JoinWorker {
     }
 
     __hangingTimer = async () => {
-        if(this.__isDone) return;
+        if (this.__isDone) return;
         // debug("%d %d %s %d",(new Date()).getTime(), this.__workerId, "hangin tick",this.__timecounter)
         if (this.__timecounter >= this.__hangingTimeout) {
             // kill worker, it was hanging
             log("error", "telegram hanging " + this.__timecounter + "sec, try kill it...")
-            fs.removeSync(JoinWorker.lockFilePath + "/joinloop.lock")
+            fs.removeSync(PmJoinWorker.lockFilePath + "/pmjoinloop.lock")
             log("telegram killed")
             process.exit(1)
         }
@@ -47,9 +48,9 @@ export default class JoinWorker {
     }
 
     __getTask = async () => {
-        let task = await Task.findOne({type: 'chat'});
+        let task = await Task.findOne({type: 'pm'});
         if (!task) {
-            task = new Task({smservice: 'simsms', country: 'ru', count: 10, capacity: 10, active: false})
+            task = new Task({type: 'pm', smservice: 'simsms', country: 'ru', active: false})
         }
         return task
     }
@@ -74,9 +75,9 @@ export default class JoinWorker {
         let chat = null
         try {
             if (config.fake) {
-                this.__TelegramClient = new FakeTelegram('./auth/' + phone.number + '.auth',20);
+                this.__TelegramClient = new FakeTelegram('./auth/' + phone.number + '.auth', 20);
             } else {
-                this.__TelegramClient = new Telegram(this.Telegram_auth, './auth/' + phone.number + '.auth',20);
+                this.__TelegramClient = new Telegram(this.Telegram_auth, './auth/' + phone.number + '.auth', 20);
             }
             targetchat = await TargetChat.findOne({$and: [{"appoinet": 0}, {"active": true}]});
             if (!targetchat) {
@@ -90,10 +91,24 @@ export default class JoinWorker {
             }
 
             log("join", phone.number, targetchat.link)
-            chat = await this.__TelegramClient.joinChat(targetchat)
+            chat = await this.__TelegramClient.joinChat(targetchat, true)
             if (!chat) {
-                log("join fail",phone.number)
+                log("join fail", phone.number)
             } else {
+                let chatUsers = null
+                if (chat._ === "chatInviteAlready") {
+                    chat = chat.chat
+                    chatUsers = await this.__TelegramClient.getChat(chat.id)
+                    chatUsers = chatUsers.users
+                } else if (chat._ === "updates") {
+                    chat = chat.chats[0]
+                    chatUsers = await this.__TelegramClient.getChat(chat.id, chat.access_hash)
+                    chatUsers = chatUsers.users
+                } else {
+                    chatUsers = chat.users;
+                    chat = chat[0]
+                }
+
                 let type = null;
                 if (chat._ === "channel") {
                     targetchat.channel_id = chat.id
@@ -105,18 +120,31 @@ export default class JoinWorker {
                 }
                 targetchat.appoinet = phone.number
                 await targetchat.save();
-                phone.joinedchat.push(
-                    {
-                        link: targetchat.link,
-                        type: type,
-                        chat_id: chat.id,
-                        access_hash: targetchat.access_hash,
-                        sent: 0
-                    }
-                )
+                phone.joined++
                 phone.seen = new Date();
                 await phone.save();
-                log("JOIN OK",phone.number)
+                log("JOIN OK", phone.number)
+                let userCount = 0;
+                if (chatUsers && chatUsers.length > 0) {
+                    for (let j = 0; j < chatUsers.length; j++) {
+                        let u = chatUsers[j];
+                        if ((!u.self || u.self === undefined) && (!u.deleted || u.deleted === undefined)) {
+                            let user = await TargetUser.findOne({"user_id": u.id});
+                            if (!user) {
+                                user = new TargetUser({
+                                    user_id: u.id,
+                                    access_hash: u.access_hash,
+                                    username: u.username,
+                                    first_name: u.first_name,
+                                    last_name: u.last_name
+                                })
+                                await user.save()
+                                userCount++;
+                            }
+                        }
+                    }
+                }
+                log("Add user ", userCount)
             }
         } catch (e) {
             console.log(e)

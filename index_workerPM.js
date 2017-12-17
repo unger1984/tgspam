@@ -1,2 +1,2 @@
 require('babel-register');
-require('./worker.js');
+require('./workerPM.js');

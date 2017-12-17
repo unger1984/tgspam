@@ -5,4 +5,4 @@ import log from "./utils/mongo-logger";
 
 require('./init')
 
-log("Start worker... task is "+(MainService.getInstance().isStart()?"runing":"stop"))
+log("Start main worker... task is "+(MainService.getInstance().isStart()?"runing":"stop"))

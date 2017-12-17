@@ -1,18 +1,22 @@
 {
-  // Applications part
   "apps": [
     {
       "name": "APP",
       "script": "index_app.js",
       "env": {
-
       }
     },
     {
-      "name": "Worker",
-      "script": "index_worker.js",
+      "name": "MainWorker",
+      "script": "index_workerMain.js",
       "env": {
-
+      },
+      "instances": "2"
+    },
+    {
+      "name": "PMWorker",
+      "script": "index_workerPM.js",
+      "env": {
       },
       "instances": "2"
     }

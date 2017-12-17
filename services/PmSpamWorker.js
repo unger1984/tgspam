@@ -6,13 +6,14 @@ import config from "../config";
 import log from "../utils/mongo-logger";
 import Telegram from "../telegram";
 import FakeTelegram from "../fake/telegram";
-import TargetChat from "../models/TargetChat";
+import {generateFullName} from "../utils/profile-util";
 import Phone from "../models/Phone";
 import fs from "fs-extra";
+import TargetUser from "../models/TargetUser";
 
-const debug = require('debug')('tgspam:debug:spamworker')
+const debug = require('debug')('tgspam:debug:pmspamworker')
 
-export default class SpamWorker {
+export default class PmSpamWorker {
 
     static lockFilePath = './lock'
 
@@ -23,7 +24,7 @@ export default class SpamWorker {
 
     __timecounter = 0
     __isDone = false
-    __hangingTimeout = 20   // timeout in sec
+    __hangingTimeout = 40   // timeout in sec
     __workerId = null
     __TelegramClient = null;
 
@@ -38,7 +39,7 @@ export default class SpamWorker {
         if (this.__timecounter >= this.__hangingTimeout) {
             // kill worker, it was hanging
             log("error", "telegram hanging " + this.__timecounter + "sec, try kill it...")
-            fs.removeSync(SpamWorker.lockFilePath + "/spamloop.lock")
+            fs.removeSync(PmSpamWorker.lockFilePath + "/pmspamloop.lock")
             log("telegram killed")
             process.exit(1)
         }
@@ -47,7 +48,7 @@ export default class SpamWorker {
     }
 
     __getTask = async () => {
-        let task = await Task.findOne({type: 'chat'});
+        let task = await Task.findOne({type: 'pm'});
         if (!task) {
             task = new Task({smservice: 'simsms', country: 'ru', count: 10, capacity: 10, active: false})
         }
@@ -74,28 +75,20 @@ export default class SpamWorker {
     }
 
     __worker = async (phone) => {
-        // check not fool capacity
-        if (await Phone.count({
-                $and: [
-                    {$where: "this.joinedchat.length < this.max"},
-                    {"active": true}
-                ]
-            }) > 0) return;
 
         if (!await this.__isTaskActive()) return
 
-        let targetchats = await TargetChat.find({
+        let targetusers = await TargetUser.find({
             $and: [
-                {"appoinet": phone.number},
                 {"issent": false},
                 {"active": true}
             ]
         })
-        if (!targetchats || targetchats.length <= 0) {
+        if (!targetusers || targetusers.length <= 0) {
             log("error", "no active chat for", phone.number)
             return
         }
-        let targetChat = null;
+        let targetUser = null;
         const task = await this.__getTask();
         try {
             if (config.fake) {
@@ -103,32 +96,34 @@ export default class SpamWorker {
             } else {
                 this.__TelegramClient = new Telegram(this.Telegram_auth,'./auth/' + phone.number + '.auth');
             }
-            for (let i = 0; i < targetchats.length; i++) {
+            for (let i = 0; i < targetusers.length; i++) {
                 if (!await this.__isTaskActive()) {
                     log("break")
                     await this.__TelegramClient.done();
                     return;
                 }
 
-                targetChat = targetchats[i];
-                log("send msg", phone.number, targetChat.link)
+                targetUser = targetusers[i];
+                log("send msg", phone.number, targetUser.user_id, targetUser.username, targetUser.first_name, targetUser.last_name)
                 try {
-                    if (targetChat.channel_id)
-                        await this.__TelegramClient.messageToChat(task.message, targetChat.channel_id, targetChat.access_hash)
-                    else if (targetChat.chat_id)
-                        await this.__TelegramClient.messageToChat(task.message, targetChat.chat_id);
+                    // await this.__TelegramClient.readMessages(0)
+                    // await this.__TelegramClient.messageToUser(task.message+"\n\n"+generateFullName(), targetUser.user_id, targetUser.access_hash);
+                    await this.__TelegramClient.messageToUser(generateFullName(), targetUser.user_id, targetUser.access_hash);
 
-                    targetChat.sent++
-                    targetChat.issent = true
-                    targetChat.last = new Date();
-                    await targetChat.save()
+                    targetUser.sent++
+                    targetUser.issent = true
+                    targetUser.last = new Date();
+                    targetUser.appoinet = phone.number
+                    await targetUser.save()
                     phone.sent++
                     phone.seen = new Date();
                     await phone.save();
                     task.sent++;
                     await task.save()
                     log("SEND OK", phone.number)
-                    await this.pause(1)         // TODO configure delay
+                    await this.pause(1)
+                    // await this.__TelegramClient.readMessages(0)
+                    await this.pause(15)         // TODO configure delay
                     this.__timecounter = 0
                 } catch (ex) {
                     log("error", phone.number, ex)
@@ -140,12 +135,13 @@ export default class SpamWorker {
                         this.__TelegramClient.done();
                         return;
                     } else {
-                        targetChat.active = false
-                        targetChat.error = ex.message
-                        await targetChat.save();
+                        targetUser.active = false
+                        targetUser.error = ex.message
+                        targetUser.appoinet = phone.number
+                        await targetUser.save();
                         phone.sent++;
                         await phone.save()
-                        await this.pause(1)     // TODO configure delay
+                        await this.pause(15)     // TODO configure delay
                         this.__timecounter = 0
                     }
                 }

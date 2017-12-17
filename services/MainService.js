@@ -109,7 +109,7 @@ export default class MainService {
     })
 
     __getTask = async () => {
-        let task = await Task.findOne({});
+        let task = await Task.findOne({type: 'chat'});
         if (!task) {
             task = new Task({smservice: 'simsms', country: 'ru', count: 10, capacity: 10, active: false})
         }

@@ -1,0 +1,36 @@
+<table class="list-targets">
+    <tbody>
+    <tr>
+        <th style="width: 1%">#</th>
+        <th style="width: 1%">
+            <input type="checkbox" id="js-delete-all">
+        </th>
+        <th>Цель</th>
+        <th>Создан</th>
+        <th>Номер</th>
+        <th>Отправлено</th>
+        <th>Последняя отправка</th>
+    </tr>
+    <%
+    _.each(items,function(user,key){
+    %>
+    <tr id="tr_<%=user._id%>"  class="<%=(user.active?"green":"red")%>">
+        <td><%=(key+1)%></td>
+        <td>
+            <input type="checkbox" class="ids" value="<%=user._id%>">
+        </td>
+        <td class="text-left"><%=(user.user_id?user.user_id+' ':'')%><%=(user.username?'@'+user.username+' ':'')%><%=(user.first_name?user.first_name+' ':'')%><%=(user.last_name?user.last_name:'')%></td>
+        <td><%=_.template.formatDateTime(user.created)%></td>
+        <td><%=(user.appoinet===0?"":"+"+user.appoinet)%></td>
+        <td><%=user.sent%></td>
+        <td><%=(user.active?(user.last ? _.template.formatDateTime(user.last) : ""):user.error)%></td>
+    </tr>
+    <%
+    });
+    %>
+    </tbody>
+</table>
+<div style="margin-top: 1em;">
+    <button class="button" id="delete">Удалить</button>
+    <button class="button" id="clear">Очистить</button>
+</div>

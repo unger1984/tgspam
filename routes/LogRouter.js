@@ -9,6 +9,7 @@ const router = new Router({prefix: "/logs"});
 
 router.use(body());
 router.get("/",async ctx => {
+    await Log.remove({"created": {$lte: new Date((new Date()).getTime() - 5 * 60 * 1000)}});
     let list = await Log.find({});
     ctx.body = {status: true, list: list}
 })

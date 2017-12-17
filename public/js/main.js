@@ -2,6 +2,7 @@ const interval = 5000; //ms
 let idleInterval = null;
 let lastLog = null;
 let taskActive = false;
+let taskActivePm = false;
 
 _.template.formatDateTime = (date) => {
     const n = (m) => {
@@ -110,45 +111,49 @@ const stopSources = async () => {
 }
 
 const updateLog = async () => {
-    let url = "/api/logs/";
-    if (lastLog !== null)
-        url += lastLog;
-    let res = await $.ajax(url)
-    if (res.status) {
-        let last = lastLog;
-        for (let i = 0; i < res.list.length; i++) {
-            let log = res.list[i];
-            $('#log').append(_.template.formatDateTime(log.created) + ' ' + log.message + "<br>\n");
-            last = (new Date(log.created)).getTime()
+    if(taskActivePm){
+        $('#page').html('<div class="center"><h1>Активен ПМ Спам</h1></div>');
+    }else {
+        let url = "/api/logs/";
+        if (lastLog !== null)
+            url += lastLog;
+        let res = await $.ajax(url)
+        if (res.status) {
+            let last = lastLog;
+            for (let i = 0; i < res.list.length; i++) {
+                let log = res.list[i];
+                $('#log').append(_.template.formatDateTime(log.created) + ' ' + log.message + "<br>\n");
+                last = (new Date(log.created)).getTime()
+            }
+            lastLog = last
+            if (res.list.length > 0)
+                $("#log").scrollTop($("#log")[0].scrollHeight);
         }
-        lastLog = last
-        if (res.list.length > 0)
-            $("#log").scrollTop($("#log")[0].scrollHeight);
-    }
-    res = await $.ajax("/api/tasks");
-    if (res.status) {
-        $('#counter').html(res.task.sent + " / " + res.good + " / " + res.total);
-        if (taskActive !== res.task.active) {
-            if (res.task.active) {
-                $('#filter').addClass("deactivate")
-                $('#smservice').prop('disabled', true)
-                $('#country').prop('disabled', true)
-                $('#count').prop('disabled', true)
-                $('#capacity').prop('disabled', true)
-                $('#start').prop('disabled', true)
-                $('#maessage').prop('disabled', false)
-                $('#start').html('Старт');
-                $('#stop').prop('disabled', false)
-            } else {
-                $('#stop').html('Стоп');
-                $('#filter').removeClass("deactivate")
-                $('#smservice').prop('disabled', false)
-                $('#country').prop('disabled', false)
-                $('#maessage').prop('disabled', true)
-                $('#count').prop('disabled', false)
-                $('#capacity').prop('disabled', false)
-                $('#start').prop('disabled', false)
-                $('#stop').prop('disabled', true)
+        res = await $.ajax("/api/tasks");
+        if (res.status) {
+            $('#counter').html(res.task.sent + " / " + res.good + " / " + res.total);
+            if (taskActive !== res.task.active) {
+                if (res.task.active) {
+                    $('#filter').addClass("deactivate")
+                    $('#smservice').prop('disabled', true)
+                    $('#country').prop('disabled', true)
+                    $('#count').prop('disabled', true)
+                    $('#capacity').prop('disabled', true)
+                    $('#start').prop('disabled', true)
+                    $('#maessage').prop('disabled', false)
+                    $('#start').html('Старт');
+                    $('#stop').prop('disabled', false)
+                } else {
+                    $('#stop').html('Стоп');
+                    $('#filter').removeClass("deactivate")
+                    $('#smservice').prop('disabled', false)
+                    $('#country').prop('disabled', false)
+                    $('#maessage').prop('disabled', true)
+                    $('#count').prop('disabled', false)
+                    $('#capacity').prop('disabled', false)
+                    $('#start').prop('disabled', false)
+                    $('#stop').prop('disabled', true)
+                }
             }
         }
     }
@@ -288,6 +293,14 @@ const getCountryes = (smsservice, country) => {
 }
 
 const getSources = async () => {
+
+    $.ajax("/api/tasks").then((res)=>{
+        taskActive = res.task.active
+    })
+    $.ajax("/api/tasks/pm").then((res)=>{
+        taskActivePm = res.task.active
+    })
+
     if (idleInterval !== null)
         clearInterval(idleInterval)
     lastLog = null;
@@ -302,13 +315,25 @@ const getSources = async () => {
     updateLog();
     $('#clear').click(e => {
         e.preventDefault();
-        if (confirm('Удалить все источники?'))
-            $.ajax({
-                url: "/api/phones/list",
-                method: "DELETE"
-            }).then(r => {
-                getSources();
-            })
+        let ids = []
+        let elms = $('.ids').toArray();
+        for (let i = 0; i < elms.length; i++) {
+            if ($(elms[i]).is(':checked')) {
+                ids.push($(elms[i]).val())
+            }
+        }
+        if (ids.length > 0) {
+            if (confirm('Очистить ' + ids.length + ' телефонов?'))
+                $.ajax({
+                    url: "/api/phones/clear",
+                    method: "PUT",
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify({list: ids})
+                }).then(r => {
+                    getSources();
+                })
+        }
     })
     $('#js-delete-all').change(() => {
         $(".ids").prop('checked', $('#js-delete-all').is(":checked"));
@@ -323,7 +348,7 @@ const getSources = async () => {
             }
         }
         if (ids.length > 0) {
-            if (confirm('Удалить ' + ids.length + ' источников?'))
+            if (confirm('Удалить ' + ids.length + ' телефонов?'))
                 $.ajax({
                     url: "/api/phones",
                     method: "PUT",
@@ -428,13 +453,25 @@ const getTargets = async () => {
     })
     $('#clear').click(e => {
         e.preventDefault();
-        if (confirm('Удалить всех получателей?'))
-            $.ajax({
-                url: "/api/chats/list",
-                method: "DELETE"
-            }).then(r => {
-                getTargets();
-            })
+        let ids = []
+        let elms = $('.ids').toArray();
+        for (let i = 0; i < elms.length; i++) {
+            if ($(elms[i]).is(':checked')) {
+                ids.push($(elms[i]).val())
+            }
+        }
+        if (ids.length > 0) {
+            if (confirm('Очистить ' + ids.length + ' чатов?'))
+                $.ajax({
+                    url: "/api/chats/clear",
+                    method: "PUT",
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify({list: ids})
+                }).then(r => {
+                    getTargets();
+                })
+        }
     })
     $('#js-delete-all').change(() => {
         $(".ids").prop('checked', $('#js-delete-all').is(":checked"));
@@ -449,7 +486,7 @@ const getTargets = async () => {
             }
         }
         if (ids.length > 0) {
-            if (confirm('Удалить ' + ids.length + ' получателей?'))
+            if (confirm('Удалить ' + ids.length + ' чатов?'))
                 $.ajax({
                     url: "/api/chats",
                     method: "PUT",
@@ -462,107 +499,6 @@ const getTargets = async () => {
         }
     })
     idleInterval = setInterval(updateTargets, interval)
-}
-
-const startSpam = async () => {
-    $('#start').prop('disabled', true)
-    $('#start').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
-
-    let message = $('#maessage').val().trim()
-    if (message.length <= 0) {
-        alert("Сообщение не должно быть пустым!");
-        $('#start').html('Старт');
-        $('#stop').prop('disabled', true)
-        $('#start').prop('disabled', false)
-    } else {
-
-        let task = {
-            message: message
-        }
-
-        let res = await $.ajax({
-            url: "/api/tasks/spam",
-            method: "POST",
-            dataType: 'json',
-            contentType: "application/json; charset=utf-8",
-            data: JSON.stringify({task: task})
-        })
-
-        if (res.status) {
-            taskActive = true;
-
-            $('#start').html('Старт');
-            $('#stop').prop('disabled', false)
-        } else {
-            alert(res.error);
-            $('#start').html('Старт');
-            $('#stop').prop('disabled', true)
-            $('#start').prop('disabled', false)
-        }
-    }
-}
-
-const stopSpam = async () => {
-    $('#stop').prop('disabled', true);
-    $('#stop').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
-
-    let res = await $.ajax({
-        url: "/api/tasks/stop",
-        method: "POST",
-        contentType: "application/json; charset=utf-8",
-    })
-
-    console.log(res);
-
-    taskActive = false;
-
-    $('#stop').html('Стоп');
-    $('#start').prop('disabled', false)
-    $('#stop').prop('disabled', true)
-}
-
-const updateSpams = async () => {
-    updateLog();
-    let res = await $.ajax("/api/tasks");
-
-    if (res.status) {
-        $('#counter').html(res.task.sent + " / " + res.total);
-    }
-}
-
-const getSpams = async () => {
-    if (idleInterval !== null)
-        clearInterval(idleInterval)
-    lastLog = null;
-
-    $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
-    let tasks = await $.ajax("/api/tasks");
-    tasks.task.countryes = getCountryes(tasks.task.smservice, tasks.task.country)
-    taskActive = tasks.task.active;
-    await template("spams", {task: tasks.task, total: tasks.total})
-
-    updateLog();
-
-    $('#start').click((e) => {
-        e.preventDefault();
-        startSpam();
-    })
-    $('#stop').click((e) => {
-        e.preventDefault();
-        stopSpam();
-    })
-    $('#clearlog').click((e) => {
-        e.preventDefault()
-        $.ajax({
-            url: "/api/logs",
-            method: "DELETE"
-        }).then(r => {
-            $('#log').html('')
-            lastLog = null;
-        })
-    })
-
-    idleInterval = setInterval(updateSpams, interval)
 }
 
 const updateProxys = async () => {
@@ -643,7 +579,363 @@ const getSettings = async () => {
 
 }
 
+const startPmSpam = async () => {
+    $('#filter').addClass("deactivate")
+    $('#smservice').prop('disabled', true)
+    $('#maessage').prop('disabled', true)
+    $('#country').prop('disabled', true)
+    $('#start').prop('disabled', true)
+    $('#start').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
+
+    let message = $('#maessage').val().trim()
+    if (message.length <= 0) {
+        $('#start').html('Старт');
+        $('#filter').removeClass("deactivate")
+        $('#smservice').prop('disabled', false)
+        $('#country').prop('disabled', false)
+        $('#maessage').prop('disabled', false)
+        $('#start').prop('disabled', false)
+        $('#stop').prop('disabled', true)
+        alert("Сообщение не должно быть пустым!");
+    } else {
+
+        let task = {
+            smservice: $('#smservice').val(),
+            country: $('#country').val(),
+            message: message
+        }
+
+        let res = await $.ajax({
+            url: "/api/tasks/pmstart",
+            method: "POST",
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            data: JSON.stringify({task: task})
+        })
+
+        if (res.status) {
+            taskActivePm = true;
+
+            $('#start').html('Старт');
+            $('#stop').prop('disabled', false)
+        } else {
+            $('#start').html('Старт');
+            $('#filter').removeClass("deactivate")
+            $('#smservice').prop('disabled', false)
+            $('#country').prop('disabled', false)
+            $('#maessage').prop('disabled', false)
+            $('#start').prop('disabled', false)
+            $('#stop').prop('disabled', true)
+            alert(res.error);
+        }
+    }
+}
+
+const stopPmSpam = async () => {
+    $('#stop').prop('disabled', true);
+    $('#stop').html('<img src="/img/preloader.gif" style="width: 14px; height: 14px">')
+
+    let res = await $.ajax({
+        url: "/api/tasks/pmstop",
+        method: "POST",
+        contentType: "application/json; charset=utf-8",
+    })
+
+    console.log(res);
+
+    taskActivePm = false;
+
+    $('#stop').html('Стоп');
+    $('#filter').removeClass("deactivate")
+    $('#smservice').prop('disabled', false)
+    $('#country').prop('disabled', false)
+    $('#maessage').prop('disabled', false)
+    $('#start').prop('disabled', false)
+    $('#stop').prop('disabled', true)
+}
+
+const updateLogPm = async () => {
+    if(taskActive){
+        $('#page').html('<div class="center"><h1>Активен Чат Спам</h1></div>');
+    }else {
+        let url = "/api/logs/";
+        if (lastLog !== null)
+            url += lastLog;
+        let res = await $.ajax(url)
+        if (res.status) {
+            let last = lastLog;
+            for (let i = 0; i < res.list.length; i++) {
+                let log = res.list[i];
+                $('#log').append(_.template.formatDateTime(log.created) + ' ' + log.message + "<br>\n");
+                last = (new Date(log.created)).getTime()
+            }
+            lastLog = last
+            if (res.list.length > 0)
+                $("#log").scrollTop($("#log")[0].scrollHeight);
+        }
+        res = await $.ajax("/api/tasks/pm");
+        if (res.status) {
+            $('#counter').html(res.task.sent + " / " + res.good + " / " + res.total);
+            if (taskActivePm !== res.task.active) {
+                if (res.task.active) {
+                    $('#filter').addClass("deactivate")
+                    $('#smservice').prop('disabled', true)
+                    $('#country').prop('disabled', true)
+                    $('#start').prop('disabled', true)
+                    $('#maessage').prop('disabled', false)
+                    $('#start').html('Старт');
+                    $('#stop').prop('disabled', false)
+                } else {
+                    $('#stop').html('Стоп');
+                    $('#filter').removeClass("deactivate")
+                    $('#smservice').prop('disabled', false)
+                    $('#country').prop('disabled', false)
+                    $('#maessage').prop('disabled', true)
+                    $('#start').prop('disabled', false)
+                    $('#stop').prop('disabled', true)
+                }
+            }
+        }
+    }
+}
+
+const updatePmSpam = async () => {
+    updateLogPm();
+    let res = await $.ajax("/api/pmphones/list")
+    if (res.status) {
+        for (let i = 0; i < res.list.length; i++) {
+            let phone = res.list[i];
+            let tds = $('#tr_' + phone._id).children('td').toArray();
+            if (tds.length > 0) {
+                $(tds[0]).html((i + 1))
+                $(tds[4]).html(phone.joined)
+                $(tds[5]).html(phone.sent)
+                $(tds[6]).html(phone.active ? (phone.last ? _.template.formatDateTime(phone.last) : "") : phone.error)
+                if (phone.active) {
+                    $('#tr_' + phone._id).removeClass("red")
+                    $('#tr_' + phone._id).addClass("green")
+                } else {
+                    $('#tr_' + phone._id).addClass("red")
+                    $('#tr_' + phone._id).removeClass("green")
+                }
+
+
+            } else {
+                // еще нет такого
+                $('#tbody').append('<tr id="tr_' + phone._id + '" class="trrow ' + (phone.active ? "green" : "red") + '">' +
+                    '        <td>' + (i + 1) + '</td>' +
+                    '        <td>' +
+                    '            <input type="checkbox" class="ids" value="' + phone._id + '">' +
+                    '        </td>' +
+                    '        <td class="text-left">+' + phone.number + '</td>' +
+                    '        <td>' + _.template.formatDateTime(phone.created) + '</td>' +
+                    '        <td>' + (phone.joined) + '</td>' +
+                    '        <td>' + phone.sent + '</td>' +
+                    '        <td>' + (phone.active ? (phone.last ? _.template.formatDateTime(phone.last) : "") : phone.error) + '</td>' +
+                    '    </tr>'
+                );
+            }
+        }
+        // delete all failds
+        try {
+            let trs = $('.trrow').toArray();
+            for (let i = 0; i < trs.length; i++) {
+                let _id = $(trs[i]).attr('id').replace('tr_', '');
+                let found = false;
+                for (let j = 0; j < res.list.length; j++) {
+                    if (res.list[j]._id === _id)
+                        found = true
+                }
+                if (!found) {
+                    $(trs[i]).remove()
+                }
+            }
+        } catch (e) {
+            console.log(e)
+        }
+    }
+}
+
+const getPmSpam = async() => {
+
+    $.ajax("/api/tasks").then((res)=>{
+        taskActive = res.task.active
+    })
+    $.ajax("/api/tasks/pm").then((res)=>{
+        taskActivePm = res.task.active
+    })
+
+    if (idleInterval !== null)
+        clearInterval(idleInterval)
+    lastLog = null;
+
+    $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
+    let res = await $.ajax("/api/pmphones/list")
+    let tasks = await $.ajax("/api/tasks/pm");
+    tasks.task.countryes = getCountryes(tasks.task.smservice, tasks.task.country)
+    taskActivePm = tasks.task.active;
+    await template("pmspam", {items: res.list, task: tasks.task, chats: tasks.chats, users: tasks.users})
+
+    updateLogPm();
+    $('#clear').click(e => {
+        e.preventDefault();
+        let ids = []
+        let elms = $('.ids').toArray();
+        for (let i = 0; i < elms.length; i++) {
+            if ($(elms[i]).is(':checked')) {
+                ids.push($(elms[i]).val())
+            }
+        }
+        if (ids.length > 0) {
+            if (confirm('Очистить ' + ids.length + ' телефонов?'))
+                $.ajax({
+                    url: "/api/pmphones/clear",
+                    method: "PUT",
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify({list: ids})
+                }).then(r => {
+                    getPmSpam();
+                })
+        }
+    })
+    $('#js-delete-all').change(() => {
+        $(".ids").prop('checked', $('#js-delete-all').is(":checked"));
+    })
+    $('#delete').click(e => {
+        e.preventDefault();
+        let ids = []
+        let elms = $('.ids').toArray();
+        for (let i = 0; i < elms.length; i++) {
+            if ($(elms[i]).is(':checked')) {
+                ids.push($(elms[i]).val())
+            }
+        }
+        if (ids.length > 0) {
+            if (confirm('Удалить ' + ids.length + ' телефонов?'))
+                $.ajax({
+                    url: "/api/pmphones",
+                    method: "PUT",
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify({list: ids})
+                }).then(r => {
+                    getPmSpam();
+                })
+        }
+    })
+    $('#start').click((e) => {
+        e.preventDefault();
+        startPmSpam();
+    })
+    $('#stop').click((e) => {
+        e.preventDefault();
+        stopPmSpam();
+    })
+    $('#smservice').change(() => {
+        $('#country').html(getCountryes($('#smservice').val()));
+    })
+    $('#clearlog').click((e) => {
+        e.preventDefault()
+        $.ajax({
+            url: "/api/logs",
+            method: "DELETE"
+        }).then(r => {
+            $('#log').html('')
+            lastLog = null;
+        })
+    })
+
+    idleInterval = setInterval(updatePmSpam, interval)
+}
+
+const updateUsers = async () => {
+    let res = await $.ajax("/api/users/list")
+    if (res.status) {
+        for (let i = 0; i < res.list.length; i++) {
+            let user = res.list[i];
+            let tds = $('#tr_' + user._id).children('td').toArray();
+            $(tds[4]).html(user.appoinet === 0 ? "" : "+" + user.appoinet)
+            $(tds[5]).html(user.sent)
+            $(tds[6]).html(user.active ? (user.last ? _.template.formatDateTime(user.last) : "") : user.error)
+            if (user.active) {
+                $('#tr_' + user._id).removeClass("red")
+                $('#tr_' + user._id).addClass("green")
+            } else {
+                $('#tr_' + user._id).addClass("red")
+                $('#tr_' + user._id).removeClass("green")
+            }
+        }
+    }
+}
+
+const getUsers = async () => {
+    if (idleInterval !== null)
+        clearInterval(idleInterval)
+
+    $('#page').html('<div class="center"><img src="/img/preloader.gif"></div>');
+    let res = await $.ajax("/api/users/list")
+    await template("users", {items: res.list})
+
+    $('#clear').click(e => {
+        e.preventDefault();
+        let ids = []
+        let elms = $('.ids').toArray();
+        for (let i = 0; i < elms.length; i++) {
+            if ($(elms[i]).is(':checked')) {
+                ids.push($(elms[i]).val())
+            }
+        }
+        if (ids.length > 0) {
+            if (confirm('Очистить ' + ids.length + ' пользователей?'))
+                $.ajax({
+                    url: "/api/users/clear",
+                    method: "PUT",
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify({list: ids})
+                }).then(r => {
+                    getUsers();
+                })
+        }
+    })
+    $('#js-delete-all').change(() => {
+        $(".ids").prop('checked', $('#js-delete-all').is(":checked"));
+    })
+    $('#delete').click(e => {
+        e.preventDefault();
+        let ids = []
+        let elms = $('.ids').toArray();
+        for (let i = 0; i < elms.length; i++) {
+            if ($(elms[i]).is(':checked')) {
+                ids.push($(elms[i]).val())
+            }
+        }
+        if (ids.length > 0) {
+            if (confirm('Удалить ' + ids.length + ' пользователей?'))
+                $.ajax({
+                    url: "/api/users",
+                    method: "PUT",
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    data: JSON.stringify({list: ids})
+                }).then(r => {
+                    getUsers();
+                })
+        }
+    })
+    idleInterval = setInterval(updateUsers, interval)
+}
+
 $(function () {
+
+    $.ajax("/api/tasks").then((res)=>{
+        taskActive = res.task.active
+    })
+    $.ajax("/api/tasks/pm").then((res)=>{
+        taskActivePm = res.task.active
+    })
+
     $('.menulink').click(function (e) {
         e.preventDefault();
         $('.menulink').removeClass("active")
@@ -665,6 +957,12 @@ $(function () {
                 break;
             case "settings":
                 getSettings();
+                break;
+            case "pmspam":
+                getPmSpam();
+                break;
+            case "users":
+                getUsers();
                 break;
         }
     })

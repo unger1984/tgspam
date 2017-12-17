@@ -13,13 +13,13 @@ import {generateFirstName, generateLastName, generateUserName} from "../utils/pr
 import FakeTelegram from "../fake/telegram";
 import SMSActivate from "../sms/sms-activate";
 import SIMSms from "../sms/simsms";
-import Phone from "../models/Phone";
+import PmPhone from "../models/PmPhone";
 import SIM5 from "../sms/5sim";
 import fs from "fs-extra";
 
-const debug = require('debug')('tgspam:debug:regworker')
+const debug = require('debug')('tgspam:debug:pmregworker')
 
-export default class RegWorker {
+export default class PmRegWorker {
 
     static lockFilePath = './lock'
 
@@ -45,7 +45,7 @@ export default class RegWorker {
         if (this.__timecounter >= this.__hangingTimeout) {
             // kill worker, it was hanging
             log("error", "telegram hanging " + this.__timecounter + "sec, try kill it...")
-            fs.removeSync(RegWorker.lockFilePath + "/regloop.lock")
+            fs.removeSync(PmRegWorker.lockFilePath + "/pmregloop.lock")
             log("telegram killed")
             process.exit(1)
         }
@@ -54,9 +54,9 @@ export default class RegWorker {
     }
 
     __getTask = async () => {
-        let task = await Task.findOne({type: 'chat'});
+        let task = await Task.findOne({type: 'pm'});
         if (!task) {
-            task = new Task({smservice: 'simsms', country: 'ru', count: 10, capacity: 10, active: false})
+            task = new Task({type: 'pm', smservice: 'simsms', country: 'ru', active: false})
         }
         return task
     }
@@ -72,15 +72,15 @@ export default class RegWorker {
         }
     }
 
-    run = async (smservice, country, capacity) => {
+    run = async (smservice, country) => {
         this.__timecounter = 0
         this.__hangingTimer()
-        const res = await this.__worker(smservice,country,capacity)
+        const res = await this.__worker(smservice,country)
         this.__isDone = true;
         return res;
     }
 
-    __worker = async (smservice, country, capacity) => {
+    __worker = async (smservice, country) => {
         if (!await this.__isTaskActive()) return
 
         const isDebug = false;
@@ -194,10 +194,10 @@ export default class RegWorker {
                 return false;
             }
             let user = this.__TelegramClient.setName(generateUserName());
-            let phone = new Phone({
+
+            let phone = new PmPhone({
                 number: state.phone,
-                user_id: auth.user.id,
-                max: capacity
+                user_id: auth.user.id
             })
             await phone.save();
             smsService.done();
